@@ -11,6 +11,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 
 interface CatalogSectionProps {
   catalog: CatalogContent;
+  onPosterPress?: (content: StreamingContent) => void;
 }
 
 const { width } = Dimensions.get('window');
@@ -53,12 +54,17 @@ const calculatePosterLayout = (screenWidth: number) => {
 const posterLayout = calculatePosterLayout(width);
 const POSTER_WIDTH = posterLayout.posterWidth;
 
-const CatalogSection = ({ catalog }: CatalogSectionProps) => {
+const CatalogSection = ({ catalog, onPosterPress }: CatalogSectionProps) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { currentTheme } = useTheme();
 
   const handleContentPress = (id: string, type: string) => {
-    navigation.navigate('Metadata', { id, type, addonId: catalog.addon });
+    const content = catalog.items.find(item => item.id === id && item.type === type);
+    if (content && onPosterPress) {
+      onPosterPress(content);
+    } else {
+      navigation.navigate('Metadata', { id, type, addonId: catalog.addon });
+    }
   };
 
   const renderContentItem = ({ item, index }: { item: StreamingContent, index: number }) => {

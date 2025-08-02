@@ -106,6 +106,117 @@ const SkeletonCatalog = React.memo(() => {
 });
 
 const HomeScreen = () => {
+  const styles = StyleSheet.create<any>({
+    stickyHeroContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+    },
+    container: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 90,
+    },
+    loadingMainContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingBottom: 90,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+    },
+    loadingMoreCatalogs: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      borderRadius: 8,
+    },
+    loadingMoreText: {
+      marginLeft: 12,
+      fontSize: 14,
+    },
+    catalogPlaceholder: {
+      marginBottom: 24,
+      paddingHorizontal: 16,
+    },
+    placeholderHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    placeholderTitle: {
+      width: 150,
+      height: 20,
+      borderRadius: 4,
+    },
+    placeholderPosters: {
+      flexDirection: 'row',
+      paddingVertical: 8,
+      gap: 8,
+    },
+    placeholderPoster: {
+      width: POSTER_WIDTH,
+      aspectRatio: 2/3,
+      borderRadius: 4,
+      marginRight: 2,
+    },
+    emptyCatalog: {
+      padding: 32,
+      alignItems: 'center',
+      margin: 16,
+      borderRadius: 16,
+    },
+    addCatalogButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 30,
+      marginTop: 16,
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+    },
+    addCatalogButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    featuredContainer: {
+      width: '100%',
+      height: height * 0.6,
+      marginTop: Platform.OS === 'ios' ? 0 : 0,
+      marginBottom: 8,
+      position: 'relative',
+    },
+    featuredBanner: {
+      width: '100%',
+      height: '100%',
+    },
+    featuredGradient: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'space-between',
+    }
+  });
+
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const isDarkMode = useColorScheme() === 'dark';
   const { currentTheme } = useTheme();
@@ -513,7 +624,7 @@ const HomeScreen = () => {
       case 'catalog':
         return (
           <Animated.View entering={FadeIn.duration(300)}>
-            <CatalogSection catalog={item.catalog} />
+            <CatalogSection catalog={item.catalog} onPosterPress={handlePosterPress} />
           </Animated.View>
         );
       case 'placeholder':
@@ -581,6 +692,12 @@ const HomeScreen = () => {
   ), [catalogsLoading, catalogs, loadedCatalogCount, totalCatalogsRef.current, navigation, currentTheme.colors]);
 
   // Memoize the main content section
+  const [selectedContent, setSelectedContent] = useState<StreamingContent | null>(null);
+
+  const handlePosterPress = useCallback((content: StreamingContent) => {
+    setSelectedContent(content);
+  }, []);
+
   const renderMainContent = useMemo(() => {
     if (isLoading) return null;
     
@@ -597,7 +714,7 @@ const HomeScreen = () => {
           keyExtractor={item => item.key}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingTop: Platform.OS === 'ios' ? 100 : 90 }
+            { paddingTop: 0 }
           ]}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={ListFooterComponent}
@@ -612,8 +729,8 @@ const HomeScreen = () => {
             autoscrollToTopThreshold: 10
           }}
           getItemLayout={(data, index) => ({
-            length: index === 0 ? 400 : 280, // Approximate heights for different item types
-            offset: index === 0 ? 0 : 400 + (index - 1) * 280,
+            length: 280,
+            offset: index * 280,
             index,
           })}
         />
@@ -670,7 +787,14 @@ const calculatePosterLayout = (screenWidth: number) => {
 const posterLayout = calculatePosterLayout(width);
 const POSTER_WIDTH = posterLayout.posterWidth;
 
-const styles = StyleSheet.create<any>({
+  const styles = StyleSheet.create<any>({
+  stickyHeroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   container: {
     flex: 1,
   },

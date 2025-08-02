@@ -22,6 +22,8 @@ import { imageCacheService } from '../../services/imageCacheService';
 
 interface FeaturedContentProps {
   featuredContent: StreamingContent | null;
+  isSaved?: boolean;
+  handleSaveToLibrary?: () => Promise<void>;
 }
 
 // Cache to store preloaded images
@@ -218,6 +220,15 @@ const FeaturedContent = ({ featuredContent }: FeaturedContentProps) => {
               )}
             </View>
 
+            {/* Description Section */}
+            {featuredContent.description && (
+              <View style={styles.descriptionContainer}>
+                <Text style={[styles.descriptionText, Platform.isTV && styles.descriptionTextTV]} numberOfLines={Platform.isTV ? 3 : 2}>
+                  {featuredContent.description}
+                </Text>
+              </View>
+            )}
+
             {/* Enhanced Metadata Section */}
             <View style={styles.metadataContainer}>
               {/* Genres */}
@@ -241,6 +252,30 @@ const FeaturedContent = ({ featuredContent }: FeaturedContentProps) => {
               )}
             </View>
 
+            {/* Action Buttons */}
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={styles.playButton}
+                onPress={() => navigation.navigate('Metadata', {
+                  id: featuredContent.id,
+                  type: featuredContent.type
+                })}
+                hasTVPreferredFocus={Platform.isTV}
+                tvParallaxProperties={Platform.isTV ? {
+                  enabled: true,
+                  shiftDistanceX: 4.0,
+                  shiftDistanceY: 4.0,
+                  tiltAngle: 0.05,
+                  magnification: 1.1,
+                } : undefined}
+              >
+                <MaterialIcons name="play-arrow" size={Platform.isTV ? 28 : 24} color="#000" />
+                <Text style={styles.playButtonText}>Play</Text>
+              </TouchableOpacity>
+
+
+            </View>
+
 
           </View>
         </TVFocusGuideView>
@@ -252,9 +287,9 @@ const FeaturedContent = ({ featuredContent }: FeaturedContentProps) => {
 const styles = StyleSheet.create({
   featuredContainer: {
     width: '100%',
-    height: Platform.isTV ? height * 0.75 : height * 0.55,
+    height: Platform.isTV ? height * 0.5 : height * 0.4,
     marginTop: 0,
-    marginBottom: Platform.isTV ? 24 : 12,
+    marginBottom: Platform.isTV ? 16 : 8,
     position: 'relative',
     borderRadius: Platform.isTV ? 0 : 12,
     overflow: 'hidden',
@@ -324,23 +359,25 @@ const styles = StyleSheet.create({
     marginBottom: Platform.isTV ? 24 : 16,
     paddingHorizontal: 0,
     position: 'relative',
-    height: Platform.isTV ? 160 : 160,
+    height: Platform.isTV ? 120 : 100,
     width: '100%',
-    marginLeft: Platform.isTV ? -200 : 0,
+    marginLeft: 0,
+    justifyContent: 'flex-start',
   },
   featuredLogo: {
-    width: width * 0.9,
-    height: 160,
+    width: Platform.isTV ? 300 : 250,
+    height: Platform.isTV ? 120 : 100,
     marginBottom: 0,
     alignSelf: 'flex-start',
-    position: Platform.isTV ? 'absolute' : 'relative',
-    left: Platform.isTV ? 0 : 'auto',
+    position: 'relative',
+    left: 0,
+    resizeMode: 'contain',
   },
   featuredLogoTV: {
-    width: width * 0.8,
-    height: 200,
-    maxWidth: 900,
-    position: 'absolute',
+    width: 300,
+    height: 120,
+    maxWidth: 300,
+    position: 'relative',
     left: 0,
   },
   featuredTitleText: {
@@ -389,6 +426,23 @@ const styles = StyleSheet.create({
   yearContainer: {
     marginTop: 8,
   },
+  descriptionContainer: {
+    marginBottom: Platform.isTV ? 24 : 16,
+    maxWidth: Platform.isTV ? width * 0.5 : width * 0.8,
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    lineHeight: 20,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  descriptionTextTV: {
+    fontSize: 18,
+    lineHeight: 26,
+  },
   yearText: {
     fontSize: 16,
     fontWeight: '500',
@@ -417,6 +471,34 @@ const styles = StyleSheet.create({
     fontSize: Platform.isTV ? 18 : 16,
     fontWeight: '600',
   },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Platform.isTV ? 20 : 16,
+    marginTop: Platform.isTV ? 24 : 16,
+  },
+  playButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: Platform.isTV ? 48 : 32,
+    paddingVertical: Platform.isTV ? 16 : 12,
+    borderRadius: Platform.isTV ? 12 : 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    minWidth: Platform.isTV ? 200 : 140,
+  },
+  playButtonText: {
+    color: '#000',
+    fontSize: Platform.isTV ? 18 : 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+
 });
 
 export default React.memo(FeaturedContent);

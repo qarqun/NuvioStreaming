@@ -58,6 +58,7 @@
     },
     "owner": "nayifleo",
     "plugins": [
+      "@react-native-tvos/config-tv",
       [
         "@sentry/react-native/expo",
         {

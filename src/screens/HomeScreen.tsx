@@ -61,7 +61,7 @@ import { SkeletonFeatured } from '../components/home/SkeletonLoaders';
 import homeStyles, { sharedStyles } from '../styles/homeStyles';
 import { useTheme } from '../contexts/ThemeContext';
 import type { Theme } from '../contexts/ThemeContext';
-import * as ScreenOrientation from 'expo-screen-orientation';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FirstTimeWelcome from '../components/FirstTimeWelcome';
 import { imageCacheService } from '../services/imageCacheService';
@@ -388,18 +388,11 @@ const HomeScreen = () => {
         }
       }
       
-      // Lock orientation to landscape before navigation to prevent glitches
-      try {
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      // Screen orientation locking is not supported on tvOS
+      // Orientation is handled automatically by the platform
       
-        // Longer delay to ensure orientation is fully set before navigation
-        await new Promise(resolve => setTimeout(resolve, 200));
-      } catch (orientationError) {
-        // If orientation lock fails, continue anyway but log it
-        logger.warn('[HomeScreen] Orientation lock failed:', orientationError);
-        // Still add a small delay
+      // Small delay for smooth navigation
       await new Promise(resolve => setTimeout(resolve, 100));
-      }
       
       navigation.navigate('Player', {
         uri: stream.url,
@@ -1131,4 +1124,4 @@ const styles = StyleSheet.create<any>({
   },
 });
 
-export default React.memo(HomeScreen); 
+export default React.memo(HomeScreen);

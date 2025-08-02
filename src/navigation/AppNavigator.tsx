@@ -28,7 +28,7 @@ import ShowRatingsScreen from '../screens/ShowRatingsScreen';
 import CatalogSettingsScreen from '../screens/CatalogSettingsScreen';
 import StreamsScreen from '../screens/StreamsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
-import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
+
 import MDBListSettingsScreen from '../screens/MDBListSettingsScreen';
 import TMDBSettingsScreen from '../screens/TMDBSettingsScreen';
 import HomeScreenSettings from '../screens/HomeScreenSettings';
@@ -96,7 +96,7 @@ export type RootStackParamList = {
   About: undefined;
   Addons: undefined;
   CatalogSettings: undefined;
-  NotificationSettings: undefined;
+
   MDBListSettings: undefined;
   TMDBSettings: undefined;
   HomeScreenSettings: undefined;
@@ -497,6 +497,14 @@ const MainTabs = () => {
                   key={route.key}
                   activeOpacity={0.7}
                   onPress={onPress}
+                  hasTVPreferredFocus={index === 0 && Platform.isTV}
+                  tvParallaxProperties={Platform.isTV ? {
+                    enabled: true,
+                    shiftDistanceX: 2.0,
+                    shiftDistanceY: 2.0,
+                    tiltAngle: 0.05,
+                    magnification: 1.1,
+                  } : undefined}
                   style={{
                     flex: 1,
                     justifyContent: 'center',
@@ -911,17 +919,7 @@ const AppNavigator = ({ initialRouteName }: { initialRouteName?: keyof RootStack
                 },
               }}
             />
-            <Stack.Screen 
-              name="NotificationSettings" 
-              component={NotificationSettingsScreen as any} 
-              options={{ 
-                animation: 'slide_from_right',
-                animationDuration: Platform.OS === 'android' ? 250 : 300,
-                contentStyle: {
-                  backgroundColor: currentTheme.colors.darkBackground,
-                },
-              }}
-            />
+
             <Stack.Screen 
               name="MDBListSettings" 
               component={MDBListSettingsScreen}

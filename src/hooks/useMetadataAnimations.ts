@@ -183,22 +183,20 @@ export const useMetadataAnimations = (safeAreaTop: number, watchProgress: any) =
     scrollY,
     headerProgress,
     
-    // Computed values for compatibility (derived from optimized values)
-    get heroHeight() { return heroHeightValue; },
-    get logoOpacity() { return uiElementsOpacity; },
-    get buttonsOpacity() { return uiElementsOpacity; },
-    get buttonsTranslateY() { return uiElementsTranslateY; },
-    get contentTranslateY() { return uiElementsTranslateY; },
-    get watchProgressOpacity() { return progressOpacity; },
-    get watchProgressWidth() { return progressOpacity; }, // Reuse for width animation
-    get headerOpacity() { return headerProgress; },
-    get headerElementsY() { 
-      return staticHeaderElementsY; // Use pre-created shared value
-    },
-    get headerElementsOpacity() { return headerProgress; },
+    // Direct shared value references for compatibility
+    heroHeight: heroHeightValue,
+    logoOpacity: uiElementsOpacity,
+    buttonsOpacity: uiElementsOpacity,
+    buttonsTranslateY: uiElementsTranslateY,
+    contentTranslateY: uiElementsTranslateY,
+    watchProgressOpacity: progressOpacity,
+    watchProgressWidth: progressOpacity, // Reuse for width animation
+    headerOpacity: headerProgress,
+    headerElementsY: staticHeaderElementsY,
+    headerElementsOpacity: headerProgress,
     
     // Functions
     scrollHandler,
     animateLogo: () => {}, // Simplified - no separate logo animation
   };
-}; 
+};

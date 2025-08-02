@@ -17,7 +17,7 @@ import {
   Clipboard,
 } from 'react-native';
 
-import * as ScreenOrientation from 'expo-screen-orientation';
+
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
@@ -887,16 +887,8 @@ export const StreamsScreen = () => {
       backdrop: bannerImage || undefined,
     });
     
-    // Lock orientation to landscape after navigation has started
-    // This allows the player to open immediately while orientation is being set
-    try {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-        .catch(error => {
-          logger.error('[StreamsScreen] Error locking orientation after navigation:', error);
-        });
-    } catch (error) {
-      logger.error('[StreamsScreen] Error locking orientation after navigation:', error);
-    }
+    // Screen orientation locking is not supported on tvOS
+    // Orientation is handled automatically by the platform
   }, [metadata, type, currentEpisode, navigation, id, selectedEpisode, imdbId, episodeStreams, groupedStreams, bannerImage]);
 
 

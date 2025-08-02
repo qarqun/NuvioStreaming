@@ -647,16 +647,8 @@ class CatalogService {
     this.saveLibrary();
     this.notifyLibrarySubscribers();
     
-    // Auto-setup notifications for series when added to library
-    if (content.type === 'series') {
-      try {
-        const { notificationService } = await import('./notificationService');
-        await notificationService.updateNotificationsForSeries(content.id);
-        console.log(`[CatalogService] Auto-setup notifications for series: ${content.name}`);
-      } catch (error) {
-        console.error(`[CatalogService] Failed to setup notifications for ${content.name}:`, error);
-      }
-    }
+    // Notifications not supported on tvOS
+    // Notification updates skipped for TV platform
   }
 
   public async removeFromLibrary(type: string, id: string): Promise<void> {
@@ -665,23 +657,8 @@ class CatalogService {
     this.saveLibrary();
     this.notifyLibrarySubscribers();
     
-    // Cancel notifications for series when removed from library
-    if (type === 'series') {
-      try {
-        const { notificationService } = await import('./notificationService');
-        // Cancel all notifications for this series
-        const scheduledNotifications = await notificationService.getScheduledNotifications();
-        const seriesToCancel = scheduledNotifications.filter(notification => notification.seriesId === id);
-        
-        for (const notification of seriesToCancel) {
-          await notificationService.cancelNotification(notification.id);
-        }
-        
-        console.log(`[CatalogService] Cancelled ${seriesToCancel.length} notifications for removed series: ${id}`);
-      } catch (error) {
-        console.error(`[CatalogService] Failed to cancel notifications for removed series ${id}:`, error);
-      }
-    }
+    // Notifications not supported on tvOS
+    // Notification cancellation skipped for TV platform
   }
 
   private addToRecentContent(content: StreamingContent): void {
@@ -823,4 +800,4 @@ class CatalogService {
 }
 
 export const catalogService = CatalogService.getInstance();
-export default catalogService; 
+export default catalogService;

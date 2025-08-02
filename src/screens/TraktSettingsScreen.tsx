@@ -15,7 +15,7 @@ import {
   Switch,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { makeRedirectUri, useAuthRequest, ResponseType, Prompt, CodeChallengeMethod } from 'expo-auth-session';
+// expo-auth-session not supported on tvOS - web browser authentication unavailable
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { traktService, TraktUser } from '../services/traktService';
 import { useSettings } from '../hooks/useSettings';
@@ -35,11 +35,8 @@ const discovery = {
   tokenEndpoint: 'https://api.trakt.tv/oauth/token',
 };
 
-// For use with deep linking
-const redirectUri = makeRedirectUri({
-  scheme: 'stremioexpo',
-  path: 'auth/trakt',
-});
+// Trakt authentication not available on tvOS
+// Web browser authentication is not supported on TV platforms
 
 const TraktSettingsScreen: React.FC = () => {
   const { settings } = useSettings();
@@ -88,67 +85,21 @@ const TraktSettingsScreen: React.FC = () => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // Setup expo-auth-session hook with PKCE
-  const [request, response, promptAsync] = useAuthRequest(
-    {
-      clientId: TRAKT_CLIENT_ID,
-      scopes: [],
-      redirectUri: redirectUri,
-      responseType: ResponseType.Code,
-      usePKCE: true,
-      codeChallengeMethod: CodeChallengeMethod.S256,
-    },
-    discovery
-  );
-
+  // Trakt authentication not supported on tvOS
+  // Web browser-based OAuth flow is not available on TV platforms
   const [isExchangingCode, setIsExchangingCode] = useState(false);
+  
+  // Placeholder for TV-compatible authentication
+  const promptAsync = () => {
+    Alert.alert(
+      'Not Available on TV',
+      'Trakt authentication requires a web browser which is not available on TV platforms. Please use the mobile version of the app to authenticate with Trakt.',
+      [{ text: 'OK' }]
+    );
+  };
 
-  // Handle the response from the auth request
-  useEffect(() => {
-    if (response) {
-      setIsExchangingCode(true);
-      if (response.type === 'success' && request?.codeVerifier) {
-        const { code } = response.params;
-        logger.log('[TraktSettingsScreen] Auth code received:', code);
-        traktService.exchangeCodeForToken(code, request.codeVerifier)
-          .then(success => {
-            if (success) {
-              logger.log('[TraktSettingsScreen] Token exchange successful');
-              checkAuthStatus().then(() => {
-                // Show success message
-                Alert.alert(
-                  'Successfully Connected',
-                  'Your Trakt account has been connected successfully.',
-                  [
-                    { 
-                      text: 'OK', 
-                      onPress: () => navigation.goBack() 
-                    }
-                  ]
-                );
-              });
-            } else {
-              logger.error('[TraktSettingsScreen] Token exchange failed');
-              Alert.alert('Authentication Error', 'Failed to complete authentication with Trakt.');
-            }
-          })
-          .catch(error => {
-            logger.error('[TraktSettingsScreen] Token exchange error:', error);
-            Alert.alert('Authentication Error', 'An error occurred during authentication.');
-          })
-          .finally(() => {
-            setIsExchangingCode(false);
-          });
-      } else if (response.type === 'error') {
-        logger.error('[TraktSettingsScreen] Authentication error:', response.error);
-        Alert.alert('Authentication Error', response.error?.message || 'An error occurred during authentication.');
-        setIsExchangingCode(false);
-      } else {
-        logger.log('[TraktSettingsScreen] Auth response type:', response.type);
-        setIsExchangingCode(false);
-      }
-    }
-  }, [response, checkAuthStatus, request?.codeVerifier, navigation]);
+  // Auth response handling removed - not supported on tvOS
+  // Web browser-based OAuth flow is not available on TV platforms
 
   const handleSignIn = () => {
     promptAsync(); // Trigger the authentication flow
@@ -300,7 +251,7 @@ const TraktSettingsScreen: React.FC = () => {
                   { backgroundColor: isDarkMode ? currentTheme.colors.primary : currentTheme.colors.primary }
                 ]}
                 onPress={handleSignIn}
-                disabled={!request || isExchangingCode} // Disable while waiting for response or exchanging code
+                disabled={isExchangingCode} // Disable while processing
               >
                 {isExchangingCode ? (
                   <ActivityIndicator size="small" color="white" />
@@ -566,4 +517,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TraktSettingsScreen; 
+export default TraktSettingsScreen;

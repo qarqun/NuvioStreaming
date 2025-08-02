@@ -5,7 +5,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList, RootStackNavigationProp } from '../../navigation/AppNavigator';
 import { PinchGestureHandler, State, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import RNImmersiveMode from 'react-native-immersive-mode';
-import * as ScreenOrientation from 'expo-screen-orientation';
+
 import { storageService } from '../../services/storageService';
 import { logger } from '../../utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -259,26 +259,10 @@ const VideoPlayer: React.FC = () => {
     }
   }, [effectiveDimensions, videoAspectRatio]);
 
-  // Force landscape orientation immediately when component mounts
+  // Screen orientation locking is not supported on tvOS
+  // Orientation is handled automatically by the platform
   useEffect(() => {
-    const lockOrientation = async () => {
-      try {
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-        logger.log('[VideoPlayer] Locked to landscape orientation');
-      } catch (error) {
-        logger.warn('[VideoPlayer] Failed to lock orientation:', error);
-      }
-    };
-
-    // Lock orientation immediately
-    lockOrientation();
-
-    return () => {
-      // Unlock orientation when component unmounts
-      ScreenOrientation.unlockAsync().catch(() => {
-        // Ignore unlock errors
-      });
-    };
+    logger.log('[VideoPlayer] Orientation handling skipped on TV platform');
   }, []);
 
   useEffect(() => {
@@ -713,13 +697,9 @@ const VideoPlayer: React.FC = () => {
 
     // Cleanup and navigate back immediately without delay
     const cleanup = async () => {
-      try {
-        // Unlock orientation first
-        await ScreenOrientation.unlockAsync();
-        logger.log('[VideoPlayer] Orientation unlocked');
-      } catch (orientationError) {
-        logger.warn('[VideoPlayer] Failed to unlock orientation:', orientationError);
-      }
+      // Screen orientation unlocking is not supported on tvOS
+      // Orientation is handled automatically by the platform
+      logger.log('[VideoPlayer] Orientation handling skipped on TV platform');
 
       // Disable immersive mode
       disableImmersiveMode();

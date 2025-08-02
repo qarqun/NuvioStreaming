@@ -5,7 +5,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { PinchGestureHandler, State, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import RNImmersiveMode from 'react-native-immersive-mode';
-import * as ScreenOrientation from 'expo-screen-orientation';
+
 import { storageService } from '../../services/storageService';
 import { logger } from '../../utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -258,10 +258,8 @@ const AndroidVideoPlayer: React.FC = () => {
     initializePlayer();
     return () => {
       subscription?.remove();
-      const unlockOrientation = async () => {
-        await ScreenOrientation.unlockAsync();
-      };
-      unlockOrientation();
+      // Screen orientation unlocking is not supported on tvOS
+      // Orientation is handled automatically by the platform
       disableImmersiveMode();
     };
   }, []);
@@ -649,14 +647,10 @@ const AndroidVideoPlayer: React.FC = () => {
     logger.log(`[AndroidVideoPlayer] Current progress: ${actualCurrentTime}/${duration} (${progressPercent.toFixed(1)}%)`);
     
     // Navigate immediately without delay
-    ScreenOrientation.unlockAsync().then(() => {
-      disableImmersiveMode();
-      navigation.goBack();
-    }).catch(() => {
-      // Fallback: navigate even if orientation unlock fails
-      disableImmersiveMode();
-      navigation.goBack();
-    });
+    // Screen orientation unlocking is not supported on tvOS
+    // Orientation is handled automatically by the platform
+    disableImmersiveMode();
+    navigation.goBack();
 
     // Send Trakt sync in background (don't await)
     const backgroundSync = async () => {

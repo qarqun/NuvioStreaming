@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { Picker } from '@react-native-picker/picker';
+
 import { useSettings, DEFAULT_SETTINGS } from '../hooks/useSettings';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { stremioService } from '../services/stremioService';
@@ -408,14 +408,7 @@ const SettingsScreen: React.FC = () => {
                 renderControl={ChevronRight}
                 onPress={() => navigation.navigate('PlayerSettings')}
               />
-              <SettingItem
-                title="Notifications"
-                description="Episode reminders"
-                icon="notifications-none"
-                renderControl={ChevronRight}
-                onPress={() => navigation.navigate('NotificationSettings')}
-                isLast={true}
-              />
+
             </SettingsCard>
 
             {/* About & Support */}

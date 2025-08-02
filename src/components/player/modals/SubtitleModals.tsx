@@ -1,12 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import Animated, { 
-  FadeIn, 
-  FadeOut,
-  SlideInRight,
-  SlideOutRight,
-} from 'react-native-reanimated';
+// Removed react-native-reanimated imports
 import { styles } from '../utils/playerStyles';
 import { WyzieSubtitle, SubtitleCue } from '../utils/playerTypes';
 import { getTrackDisplayName, formatLanguage } from '../utils/playerUtils';
@@ -89,9 +84,7 @@ export const SubtitleModals: React.FC<SubtitleModalsProps> = ({
     return (
       <>
         {/* Backdrop */}
-        <Animated.View 
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
+        <View 
           style={{
             position: 'absolute',
             top: 0,
@@ -107,12 +100,10 @@ export const SubtitleModals: React.FC<SubtitleModalsProps> = ({
             onPress={handleClose}
             activeOpacity={1}
           />
-        </Animated.View>
+        </View>
 
         {/* Side Menu */}
-        <Animated.View
-          entering={SlideInRight.duration(300)}
-          exiting={SlideOutRight.duration(250)}
+        <View
           style={{
             position: 'absolute',
             top: 0,
@@ -527,7 +518,7 @@ export const SubtitleModals: React.FC<SubtitleModalsProps> = ({
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </Animated.View>
+        </View>
       </>
     );
   };
@@ -539,4 +530,4 @@ export const SubtitleModals: React.FC<SubtitleModalsProps> = ({
   );
 };
 
-export default SubtitleModals; 
+export default SubtitleModals;

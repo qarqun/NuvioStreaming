@@ -17,14 +17,6 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import Animated, {
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  Easing,
-  withDelay
-} from 'react-native-reanimated';
 import { StreamingContent } from '../../services/catalogService';
 import { SkeletonFeatured } from './SkeletonLoaders';
 import { isValidMetahubLogo, hasValidLogoFormat, isMetahubUrl, isTmdbUrl } from '../../utils/logoUtils';
@@ -49,70 +41,18 @@ const NoFeaturedContent = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { currentTheme } = useTheme();
 
-  const styles = StyleSheet.create({
-    noContentContainer: {
-      height: height * 0.55,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 40,
-      backgroundColor: currentTheme.colors.elevation1,
-      borderRadius: 12,
-      marginBottom: 12,
-    },
-    noContentTitle: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      color: currentTheme.colors.highEmphasis,
-      marginTop: 16,
-      marginBottom: 8,
-      textAlign: 'center',
-    },
-    noContentText: {
-      fontSize: 16,
-      color: currentTheme.colors.mediumEmphasis,
-      textAlign: 'center',
-      marginBottom: 24,
-    },
-    noContentButtons: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 16,
-      width: '100%',
-    },
-    noContentButton: {
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 30,
-      backgroundColor: currentTheme.colors.elevation3,
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    noContentButtonText: {
-      color: currentTheme.colors.highEmphasis,
-      fontWeight: '600',
-      fontSize: 14,
-    }
-  });
-
   return (
-    <View style={styles.noContentContainer}>
-      <MaterialIcons name="theaters" size={48} color={currentTheme.colors.mediumEmphasis} />
-      <Text style={styles.noContentTitle}>No Featured Content</Text>
-      <Text style={styles.noContentText}>
-        Install addons with catalogs or change the content source in your settings.
-      </Text>
-      <View style={styles.noContentButtons}>
+    <View style={[styles.featuredContainer, { backgroundColor: currentTheme.colors.elevation1 }]}>
+      <View style={styles.backgroundFallback}>
+        <MaterialIcons name="movie" size={64} color={currentTheme.colors.mediumEmphasis} />
+        <Text style={[styles.noContentText, { color: currentTheme.colors.mediumEmphasis }]}>
+          No featured content available
+        </Text>
         <TouchableOpacity
-          style={[styles.noContentButton, { backgroundColor: currentTheme.colors.primary }]}
-          onPress={() => navigation.navigate('Addons')}
+          style={[styles.exploreButton, { backgroundColor: currentTheme.colors.primary }]}
+          onPress={() => navigation.navigate('Search')}
         >
-          <Text style={[styles.noContentButtonText, { color: currentTheme.colors.white }]}>Install Addons</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.noContentButton}
-          onPress={() => navigation.navigate('HomeScreenSettings')}
-        >
-          <Text style={styles.noContentButtonText}>Settings</Text>
+          <Text style={styles.exploreButtonText}>Explore Content</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -122,456 +62,193 @@ const NoFeaturedContent = () => {
 const FeaturedContent = ({ featuredContent, isSaved, handleSaveToLibrary }: FeaturedContentProps) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { currentTheme } = useTheme();
-  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logoLoaded, setLogoLoaded] = useState(false);
-  const [bannerLoaded, setBannerLoaded] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(true);
-  const [logoError, setLogoError] = useState(false);
-  const [bannerError, setBannerError] = useState(false);
   const { settings } = useSettings();
-  const logoOpacity = useSharedValue(0);
-  const bannerOpacity = useSharedValue(0);
-  const posterOpacity = useSharedValue(0);
-  const prevContentIdRef = useRef<string | null>(null);
-  // Add state for tracking logo load errors
-  const [logoLoadError, setLogoLoadError] = useState(false);
-  // Add a ref to track logo fetch in progress
-  const logoFetchInProgress = useRef<boolean>(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [isLogoLoading, setIsLogoLoading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  // Removed TMDB service integration
 
-  // Enhanced poster transition animations
-  const posterScale = useSharedValue(1);
-  const posterTranslateY = useSharedValue(0);
-  const overlayOpacity = useSharedValue(0.15);
-
-  // Animation values
-  const posterAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: posterOpacity.value,
-    transform: [
-      { scale: posterScale.value },
-      { translateY: posterTranslateY.value }
-    ],
-  }));
-
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: logoOpacity.value,
-  }));
-
-  const contentOpacity = useSharedValue(1); // Start visible
-  const buttonsOpacity = useSharedValue(1);
-
-  const contentAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-  }));
-
-  const buttonsAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: buttonsOpacity.value,
-  }));
-
-  const overlayAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  // Preload the image
-  const preloadImage = async (url: string): Promise<boolean> => {
-    // Skip if already cached to prevent redundant prefetch
-    if (imageCache[url]) return true;
-
-    try {
-      // Simplified validation to reduce CPU overhead
-      if (!url || typeof url !== 'string') return false;
-
-      // Use our optimized cache service instead of direct prefetch
-      await imageCacheService.getCachedImageUrl(url);
-      imageCache[url] = true;
-      return true;
-    } catch (error) {
-      // Clear any partial cache entry on error
-      delete imageCache[url];
-      return false;
+  // Preload image when component mounts
+  useEffect(() => {
+    if (featuredContent?.poster && !imageCache[featuredContent.poster]) {
+      const preloadImage = async () => {
+        try {
+          await imageCacheService.getCachedImageUrl(featuredContent.poster!);
+          imageCache[featuredContent.poster!] = true;
+        } catch (error) {
+          logger.error('Failed to preload featured image:', error);
+        }
+      };
+      preloadImage();
     }
-  };
+  }, [featuredContent?.poster]);
 
-  // Reset logo error state when content changes
+  // TMDB data fetching removed due to API limitations
+
+  // Fetch logo when featured content changes
   useEffect(() => {
-    setLogoLoadError(false);
-  }, [featuredContent?.id]);
-
-  // Fetch logo based on preference
-  useEffect(() => {
-    if (!featuredContent || logoFetchInProgress.current) return;
-
     const fetchLogo = async () => {
-      logoFetchInProgress.current = true;
-
+      if (!featuredContent || isLogoLoading) return;
+      
+      setIsLogoLoading(true);
+      setLogoUrl(null);
+      
       try {
-        const contentId = featuredContent.id;
-        const contentData = featuredContent; // Use a clearer variable name
-        const currentLogo = contentData.logo;
-
-        // Get preferences
-        const logoPreference = settings.logoSourcePreference || 'metahub';
-        const preferredLanguage = settings.tmdbLanguagePreference || 'en';
-
-        // Reset state for new fetch
-        setLogoUrl(null);
-        setLogoLoadError(false);
-
-        // Extract IDs
-        let imdbId: string | null = null;
-        if (contentData.id.startsWith('tt')) {
-          imdbId = contentData.id;
-        } else if ((contentData as any).imdbId) {
-          imdbId = (contentData as any).imdbId;
-        } else if ((contentData as any).externalIds?.imdb_id) {
-          imdbId = (contentData as any).externalIds.imdb_id;
+        // Use existing logo logic
+        if (featuredContent.logo) {
+          setLogoUrl(featuredContent.logo);
         }
-
-        let tmdbId: string | null = null;
-        if (contentData.id.startsWith('tmdb:')) {
-          tmdbId = contentData.id.split(':')[1];
-        } else if ((contentData as any).tmdb_id) {
-          tmdbId = String((contentData as any).tmdb_id);
-        }
-
-        // If we only have IMDB ID, try to find TMDB ID proactively
-        if (imdbId && !tmdbId) {
-          try {
-            const tmdbService = TMDBService.getInstance();
-            const foundData = await tmdbService.findTMDBIdByIMDB(imdbId);
-            if (foundData) {
-              tmdbId = String(foundData);
-            }
-          } catch (findError) {
-            // logger.warn(`[FeaturedContent] Failed to find TMDB ID for ${imdbId}:`, findError);
-          }
-        }
-
-        const tmdbType = contentData.type === 'series' ? 'tv' : 'movie';
-        let finalLogoUrl: string | null = null;
-        let primaryAttempted = false;
-        let fallbackAttempted = false;
-
-        // --- Logo Fetching Logic ---
-
-        if (logoPreference === 'metahub') {
-          // Primary: Metahub (needs imdbId)
-          if (imdbId) {
-            primaryAttempted = true;
-            const metahubUrl = `https://images.metahub.space/logo/medium/${imdbId}/img`;
-            try {
-              const response = await fetch(metahubUrl, { method: 'HEAD' });
-              if (response.ok) {
-                finalLogoUrl = metahubUrl;
-              }
-            } catch (error) { /* Log if needed */ }
-          }
-
-          // Fallback: TMDB (needs tmdbId)
-          if (!finalLogoUrl && tmdbId) {
-            fallbackAttempted = true;
-            try {
-              const tmdbService = TMDBService.getInstance();
-              const logoUrl = await tmdbService.getContentLogo(tmdbType, tmdbId, preferredLanguage);
-              if (logoUrl) {
-                finalLogoUrl = logoUrl;
-              }
-            } catch (error) { /* Log if needed */ }
-          }
-
-        } else { // logoPreference === 'tmdb'
-          // Primary: TMDB (needs tmdbId)
-          if (tmdbId) {
-            primaryAttempted = true;
-            try {
-              const tmdbService = TMDBService.getInstance();
-              const logoUrl = await tmdbService.getContentLogo(tmdbType, tmdbId, preferredLanguage);
-              if (logoUrl) {
-                finalLogoUrl = logoUrl;
-              }
-            } catch (error) { /* Log if needed */ }
-          }
-
-          // Fallback: Metahub (needs imdbId)
-          if (!finalLogoUrl && imdbId) {
-            fallbackAttempted = true;
-            const metahubUrl = `https://images.metahub.space/logo/medium/${imdbId}/img`;
-            try {
-              const response = await fetch(metahubUrl, { method: 'HEAD' });
-              if (response.ok) {
-                finalLogoUrl = metahubUrl;
-              }
-            } catch (error) { /* Log if needed */ }
-          }
-        }
-
-        // --- Set Final Logo ---
-        if (finalLogoUrl) {
-          setLogoUrl(finalLogoUrl);
-        } else if (currentLogo) {
-          // Use existing logo only if primary and fallback failed or weren't applicable
-          setLogoUrl(currentLogo);
-        } else {
-          // No logo found from any source
-          setLogoLoadError(true);
-          // logger.warn(`[FeaturedContent] No logo found for ${contentData.name} (${contentId}) with preference ${logoPreference}. Primary attempted: ${primaryAttempted}, Fallback attempted: ${fallbackAttempted}`);
-        }
-
       } catch (error) {
-        // logger.error('[FeaturedContent] Error in fetchLogo:', error);
-        setLogoLoadError(true);
+        logger.error('Error fetching logo:', error);
       } finally {
-        logoFetchInProgress.current = false;
+        setIsLogoLoading(false);
       }
     };
 
-    // Trigger fetch when content changes
     fetchLogo();
-  }, [featuredContent, settings.logoSourcePreference, settings.tmdbLanguagePreference]);
+   }, [featuredContent]);
 
-  // Load poster and logo
-  useEffect(() => {
-    if (!featuredContent) return;
-
-    const posterUrl = featuredContent.banner || featuredContent.poster;
-    const contentId = featuredContent.id;
-    const isContentChange = contentId !== prevContentIdRef.current;
-
-    // Enhanced content change detection and animations
-    if (isContentChange) {
-      // Animate out current content
-      if (prevContentIdRef.current) {
-        posterOpacity.value = withTiming(0, {
-          duration: 300,
-          easing: Easing.out(Easing.cubic)
-        });
-        posterScale.value = withTiming(0.95, {
-          duration: 300,
-          easing: Easing.out(Easing.cubic)
-        });
-        overlayOpacity.value = withTiming(0.6, {
-          duration: 300,
-          easing: Easing.out(Easing.cubic)
-        });
-        contentOpacity.value = withTiming(0.3, {
-          duration: 200,
-          easing: Easing.out(Easing.cubic)
-        });
-        buttonsOpacity.value = withTiming(0.3, {
-          duration: 200,
-          easing: Easing.out(Easing.cubic)
-        });
-      } else {
-        // Initial load - start from 0
-        posterOpacity.value = 0;
-        posterScale.value = 1.1;
-        overlayOpacity.value = 0;
-        contentOpacity.value = 0;
-        buttonsOpacity.value = 0;
-      }
-      logoOpacity.value = 0;
+  const handlePlayPress = () => {
+    if (featuredContent) {
+      navigation.navigate('Metadata', {
+         id: featuredContent.id,
+         type: featuredContent.type
+       });
     }
-
-    prevContentIdRef.current = contentId;
-
-    // Set poster URL for immediate display
-    if (posterUrl) setBannerUrl(posterUrl);
-
-    // Load images with enhanced animations
-    const loadImages = async () => {
-      // Small delay to allow fade out animation to complete
-      await new Promise(resolve => setTimeout(resolve, isContentChange && prevContentIdRef.current ? 300 : 0));
-
-      // Load poster with enhanced transition
-      if (posterUrl) {
-        const posterSuccess = await preloadImage(posterUrl);
-        if (posterSuccess) {
-          // Animate in new poster with scale and fade
-          posterScale.value = withTiming(1, {
-            duration: 800,
-            easing: Easing.out(Easing.cubic)
-          });
-          posterOpacity.value = withTiming(1, {
-            duration: 700,
-            easing: Easing.out(Easing.cubic)
-          });
-          overlayOpacity.value = withTiming(0.15, {
-            duration: 600,
-            easing: Easing.out(Easing.cubic)
-          });
-
-          // Animate content back in with delay
-          contentOpacity.value = withDelay(200, withTiming(1, {
-            duration: 600,
-            easing: Easing.out(Easing.cubic)
-          }));
-          buttonsOpacity.value = withDelay(400, withTiming(1, {
-            duration: 500,
-            easing: Easing.out(Easing.cubic)
-          }));
-        }
-      }
-
-      // Load logo if available with enhanced timing
-      if (logoUrl) {
-        const logoSuccess = await preloadImage(logoUrl);
-        if (logoSuccess) {
-          logoOpacity.value = withDelay(500, withTiming(1, {
-            duration: 600,
-            easing: Easing.out(Easing.cubic)
-          }));
-        } else {
-          setLogoLoadError(true);
-        }
-      }
-    };
-
-    loadImages();
-  }, [featuredContent?.id, logoUrl]);
-
-  const onLogoLoadError = () => {
-    setLogoLoaded(true); // Treat error as "loaded" to stop spinner
-    setLogoError(true);
   };
 
   const handleInfoPress = () => {
     if (featuredContent) {
       navigation.navigate('Metadata', {
-        id: featuredContent.id,
-        type: featuredContent.type
-      });
+         id: featuredContent.id,
+         type: featuredContent.type
+       });
     }
+  };
+
+  const formatGenres = (genres: string[] | undefined) => {
+    if (!genres || genres.length === 0) return '';
+    return genres.slice(0, 3).join(' • ');
   };
 
   if (!featuredContent) {
     return <NoFeaturedContent />;
   }
 
+  const posterUrl = featuredContent.poster;
+  const formattedGenres = formatGenres(featuredContent.genres);
+
   return (
-    <Animated.View
-      entering={FadeIn.duration(400).easing(Easing.out(Easing.cubic))}
-    >
-      <TouchableOpacity
-        activeOpacity={0.95}
-        onPress={() => {
-          navigation.navigate('Metadata', {
-            id: featuredContent.id,
-            type: featuredContent.type
-          });
-        }}
-        style={styles.featuredContainer as ViewStyle}
+    <View style={styles.featuredContainer}>
+      {/* Background Image */}
+      <View style={styles.imageContainer}>
+        {posterUrl && !imageError ? (
+          <ExpoImage
+            source={{ uri: posterUrl }}
+            style={styles.featuredImage}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={300}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+            placeholder={{ uri: 'https://via.placeholder.com/400x600' }}
+            placeholderContentFit="cover"
+          />
+        ) : (
+          <View style={[styles.backgroundFallback, { backgroundColor: currentTheme.colors.elevation1 }]}>
+            <MaterialIcons name="movie" size={64} color={currentTheme.colors.mediumEmphasis} />
+          </View>
+        )}
+      </View>
+
+      {/* Content Overlay */}
+      <View style={styles.contentOverlay} />
+
+      {/* Gradient Overlay */}
+      <LinearGradient
+        colors={[
+          'transparent',
+          'rgba(0,0,0,0.3)',
+          'rgba(0,0,0,0.7)',
+          'rgba(0,0,0,0.9)'
+        ]}
+        locations={[0, 0.4, 0.7, 1]}
+        style={styles.featuredGradient}
       >
-        <Animated.View style={[styles.imageContainer, posterAnimatedStyle]}>
-          <ImageBackground
-            source={{ uri: bannerUrl || featuredContent.poster }}
-            style={styles.featuredImage as ViewStyle}
-            resizeMode="cover"
-          >
-            {/* Subtle content overlay for better readability */}
-            <Animated.View style={[styles.contentOverlay, overlayAnimatedStyle]} />
+        <View style={styles.featuredContentContainer}>
+          {/* Logo or Title */}
+          {logoUrl && !isLogoLoading ? (
+            <ExpoImage
+              source={{ uri: logoUrl }}
+              style={styles.featuredLogo}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
+          ) : (
+            <Text style={[styles.featuredTitleText, { color: '#FFFFFF' }]} numberOfLines={2}>
+               {featuredContent.name}
+             </Text>
+          )}
 
-            <LinearGradient
-              colors={[
-                'rgba(0,0,0,0.1)',
-                'rgba(0,0,0,0.2)',
-                'rgba(0,0,0,0.4)',
-                'rgba(0,0,0,0.8)',
-                currentTheme.colors.darkBackground,
-              ]}
-              locations={[0, 0.2, 0.5, 0.8, 1]}
-              style={styles.featuredGradient as ViewStyle}
+          {/* Genres */}
+          {formattedGenres && (
+            <View style={styles.genreContainer}>
+              <Text style={[styles.genreText, { color: '#FFFFFF' }]}>
+                {formattedGenres}
+              </Text>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.featuredButtons}>
+            {/* Play Button */}
+            <TouchableOpacity
+              style={[styles.playButton, { backgroundColor: '#FFFFFF' }]}
+              onPress={handlePlayPress}
+              activeOpacity={0.8}
             >
-              <Animated.View
-                style={[styles.featuredContentContainer as ViewStyle, contentAnimatedStyle]}
-              >
-                {logoUrl && !logoLoadError ? (
-                  <Animated.View style={logoAnimatedStyle}>
-                    <ExpoImage
-                      source={{ uri: logoUrl }}
-                      style={styles.featuredLogo as ImageStyle}
-                      contentFit="contain"
-                      cachePolicy="memory"
-                      transition={300}
-                      recyclingKey={`logo-${featuredContent.id}`}
-                      onError={onLogoLoadError}
-                    />
-                  </Animated.View>
-                ) : (
-                  <Text style={[styles.featuredTitleText as TextStyle, { color: currentTheme.colors.highEmphasis }]}>
-                    {featuredContent.name}
-                  </Text>
-                )}
-                <View style={styles.genreContainer as ViewStyle}>
-                  {featuredContent.genres?.slice(0, 3).map((genre, index, array) => (
-                    <React.Fragment key={index}>
-                      <Text style={[styles.genreText as TextStyle, { color: currentTheme.colors.white }]}>
-                        {genre}
-                      </Text>
-                      {index < array.length - 1 && (
-                        <Text style={[styles.genreDot as TextStyle, { color: currentTheme.colors.white }]}>•</Text>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </View>
-              </Animated.View>
+              <MaterialIcons name="play-arrow" size={20} color="#000000" />
+              <Text style={[styles.playButtonText, { color: '#000000' }]}>Play</Text>
+            </TouchableOpacity>
 
-              <Animated.View style={[styles.featuredButtons as ViewStyle, buttonsAnimatedStyle]}>
-                <TouchableOpacity
-                  style={styles.myListButton as ViewStyle}
-                  onPress={handleSaveToLibrary}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons
-                    name={isSaved ? "bookmark" : "bookmark-border"}
-                    size={24}
-                    color={currentTheme.colors.white}
-                  />
-                  <Text style={[styles.myListButtonText as TextStyle, { color: currentTheme.colors.white }]}>
-                    {isSaved ? "Saved" : "Save"}
-                  </Text>
-                </TouchableOpacity>
+            {/* My List Button */}
+            <TouchableOpacity
+              style={styles.myListButton}
+              onPress={handleSaveToLibrary}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={isSaved ? "check" : "add"}
+                size={20}
+                color="#FFFFFF"
+              />
+              <Text style={[styles.myListButtonText, { color: '#FFFFFF' }]}>
+                {isSaved ? 'Saved' : 'My List'}
+              </Text>
+            </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.playButton as ViewStyle, { backgroundColor: currentTheme.colors.white }]}
-                  onPress={() => {
-                    if (featuredContent) {
-                      navigation.navigate('Streams', {
-                        id: featuredContent.id,
-                        type: featuredContent.type
-                      });
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="play-arrow" size={24} color={currentTheme.colors.black} />
-                  <Text style={[styles.playButtonText as TextStyle, { color: currentTheme.colors.black }]}>
-                    Play
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.infoButton as ViewStyle}
-                  onPress={handleInfoPress}
-                  activeOpacity={0.7}
-                >
-                  <MaterialIcons name="info-outline" size={24} color={currentTheme.colors.white} />
-                  <Text style={[styles.infoButtonText as TextStyle, { color: currentTheme.colors.white }]}>
-                    Info
-                  </Text>
-                </TouchableOpacity>
-              </Animated.View>
-            </LinearGradient>
-          </ImageBackground>
-        </Animated.View>
-      </TouchableOpacity>
-    </Animated.View>
+            {/* Info Button */}
+            <TouchableOpacity
+              style={styles.infoButton}
+              onPress={handleInfoPress}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="info-outline" size={20} color="#FFFFFF" />
+              <Text style={[styles.infoButtonText, { color: '#FFFFFF' }]}>Info</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   featuredContainer: {
     width: '100%',
-    height: height * 0.55, // Slightly taller for better proportions
+    height: height * 0.55,
     marginTop: 0,
     marginBottom: 12,
     position: 'relative',
@@ -596,7 +273,7 @@ const styles = StyleSheet.create({
   featuredImage: {
     width: '100%',
     height: '100%',
-    transform: [{ scale: 1.05 }], // Subtle zoom for depth
+    transform: [{ scale: 1.05 }],
   },
   backgroundFallback: {
     position: 'absolute',
@@ -724,6 +401,23 @@ const styles = StyleSheet.create({
     zIndex: 1,
     pointerEvents: 'none',
   },
+  noContentText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  exploreButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  exploreButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
-export default React.memo(FeaturedContent); 
+export default React.memo(FeaturedContent);

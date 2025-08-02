@@ -19,7 +19,7 @@ import AppNavigator, {
   CustomNavigationDarkTheme,
   CustomDarkTheme
 } from './src/navigation/AppNavigator';
-import 'react-native-reanimated';
+// Removed react-native-reanimated import
 import { CatalogProvider } from './src/contexts/CatalogContext';
 import { GenreProvider } from './src/contexts/GenreContext';
 import { TraktProvider } from './src/contexts/TraktContext';

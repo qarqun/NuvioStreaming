@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,19 +13,6 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { colors } from '../../styles/colors';
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-  useSharedValue,
-  interpolate,
-  Extrapolate,
-  runOnJS,
-} from 'react-native-reanimated';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
 import { StreamingContent } from '../../services/catalogService';
 
 interface DropUpMenuProps {
@@ -36,144 +23,92 @@ interface DropUpMenuProps {
 }
 
 export const DropUpMenu = ({ visible, onClose, item, onOptionSelect }: DropUpMenuProps) => {
-  const translateY = useSharedValue(300);
-  const opacity = useSharedValue(0);
   const isDarkMode = useColorScheme() === 'dark';
-  const SNAP_THRESHOLD = 100;
-
-  useEffect(() => {
-    if (visible) {
-      opacity.value = withTiming(1, { duration: 200 });
-      translateY.value = withTiming(0, { duration: 300 });
-    } else {
-      opacity.value = withTiming(0, { duration: 200 });
-      translateY.value = withTiming(300, { duration: 300 });
-    }
-  }, [visible]);
-
-  const gesture = Gesture.Pan()
-    .onStart(() => {
-      // Store initial position if needed
-    })
-    .onUpdate((event) => {
-      if (event.translationY > 0) { // Only allow dragging downwards
-        translateY.value = event.translationY;
-        opacity.value = interpolate(
-          event.translationY,
-          [0, 300],
-          [1, 0],
-          Extrapolate.CLAMP
-        );
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationY > SNAP_THRESHOLD || event.velocityY > 500) {
-        translateY.value = withTiming(300, { duration: 300 });
-        opacity.value = withTiming(0, { duration: 200 });
-        runOnJS(onClose)();
-      } else {
-        translateY.value = withTiming(0, { duration: 300 });
-        opacity.value = withTiming(1, { duration: 200 });
-      }
-    });
-
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
-  const menuStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  }));
 
   const menuOptions = [
-    {
-      icon: item.inLibrary ? 'bookmark' : 'bookmark-border',
-      label: item.inLibrary ? 'Remove from Library' : 'Add to Library',
-      action: 'library'
-    },
-    {
-      icon: 'check-circle',
-      label: 'Mark as Watched',
-      action: 'watched'
-    },
-    {
-      icon: 'playlist-add',
-      label: 'Add to Playlist',
-      action: 'playlist'
-    },
-    {
-      icon: 'share',
-      label: 'Share',
-      action: 'share'
-    }
+    { id: 'play', label: 'Play', icon: 'play-arrow' },
+    { id: 'info', label: 'More Info', icon: 'info-outline' },
+    { id: 'save', label: 'Add to My List', icon: 'bookmark-border' },
+    { id: 'share', label: 'Share', icon: 'share' },
   ];
 
-  const backgroundColor = isDarkMode ? '#1A1A1A' : '#FFFFFF';
+  const handleOptionPress = (optionId: string) => {
+    onOptionSelect(optionId);
+    onClose();
+  };
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="slide"
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Animated.View style={[styles.modalOverlay, overlayStyle]}>
-          <Pressable style={styles.modalOverlayPressable} onPress={onClose} />
-          <GestureDetector gesture={gesture}>
-            <Animated.View style={[styles.menuContainer, menuStyle, { backgroundColor }]}>
-              <View style={styles.dragHandle} />
-              <View style={styles.menuHeader}>
-                <ExpoImage
-                  source={{ uri: item.poster }}
-                  style={styles.menuPoster}
-                  contentFit="cover"
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalOverlayPressable} onPress={onClose} />
+        
+        <View style={[
+          styles.menuContainer,
+          { backgroundColor: isDarkMode ? colors.darkBackground : colors.lightBackground }
+        ]}>
+          {/* Drag Handle */}
+          <View style={styles.dragHandle} />
+          
+          {/* Header with item info */}
+          <View style={styles.menuHeader}>
+            <ExpoImage
+              source={{ uri: item.poster || 'https://via.placeholder.com/300x450' }}
+              style={styles.menuPoster}
+              contentFit="cover"
+              cachePolicy="memory"
+            />
+            <View style={styles.menuTitleContainer}>
+              <Text style={[
+                styles.menuTitle,
+                { color: isDarkMode ? colors.white : colors.black }
+              ]} numberOfLines={2}>
+                {item.name}
+              </Text>
+              {item.year && (
+                <Text style={[
+                  styles.menuYear,
+                  { color: isDarkMode ? colors.textMuted : colors.textMutedDark }
+                ]}>
+                  {item.year}
+                </Text>
+              )}
+            </View>
+          </View>
+          
+          {/* Menu Options */}
+          <View style={styles.menuOptions}>
+            {menuOptions.map((option, index) => (
+              <TouchableOpacity
+                key={option.id}
+                style={[
+                  styles.menuOption,
+                  { borderBottomColor: isDarkMode ? colors.border : colors.border },
+                  index === menuOptions.length - 1 && styles.lastMenuOption
+                ]}
+                onPress={() => handleOptionPress(option.id)}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons
+                  name={option.icon as any}
+                  size={24}
+                  color={isDarkMode ? colors.white : colors.black}
                 />
-                <View style={styles.menuTitleContainer}>
-                  <Text style={[styles.menuTitle, { color: isDarkMode ? '#FFFFFF' : '#000000' }]}>
-                    {item.name}
-                  </Text>
-                  {item.year && (
-                    <Text style={[styles.menuYear, { color: isDarkMode ? '#999999' : '#666666' }]}>
-                      {item.year}
-                    </Text>
-                  )}
-                </View>
-              </View>
-              <View style={styles.menuOptions}>
-                {menuOptions.map((option, index) => (
-                  <TouchableOpacity
-                    key={option.action}
-                    style={[
-                      styles.menuOption,
-                      { borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
-                      index === menuOptions.length - 1 && styles.lastMenuOption
-                    ]}
-                    onPress={() => {
-                      onOptionSelect(option.action);
-                      onClose();
-                    }}
-                  >
-                    <MaterialIcons
-                      name={option.icon as "bookmark" | "check-circle" | "playlist-add" | "share" | "bookmark-border"}
-                      size={24}
-                      color={colors.primary}
-                    />
-                    <Text style={[
-                      styles.menuOptionText,
-                      { color: isDarkMode ? '#FFFFFF' : '#000000' }
-                    ]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Animated.View>
-          </GestureDetector>
-        </Animated.View>
-      </GestureHandlerRootView>
+                <Text style={[
+                  styles.menuOptionText,
+                  { color: isDarkMode ? colors.white : colors.black }
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
     </Modal>
   );
 };
@@ -254,4 +189,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DropUpMenu; 
+export default DropUpMenu;

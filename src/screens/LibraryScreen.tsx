@@ -13,12 +13,13 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  TVEventHandler,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+// Removed react-native-reanimated import
 import { LinearGradient } from 'expo-linear-gradient';
 import { catalogService } from '../services/catalogService';
 import type { StreamingContent } from '../services/catalogService';
@@ -203,7 +204,7 @@ const SkeletonLoader = () => {
 const LibraryScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const isDarkMode = useColorScheme() === 'dark';
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [loading, setLoading] = useState(true);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [filter, setFilter] = useState<'all' | 'movies' | 'series'>('all');
@@ -211,6 +212,22 @@ const LibraryScreen = () => {
   const [selectedTraktFolder, setSelectedTraktFolder] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
   const { currentTheme } = useTheme();
+  
+  // TV-optimized grid calculations
+  const isTV = Platform.isTV || width > 1200;
+  const getNumColumns = () => {
+    if (isTV) {
+      if (width >= 1920) return 6; // 4K TVs
+      if (width >= 1280) return 5; // HD TVs
+      return 4; // Smaller TVs
+    }
+    return 2; // Mobile/tablet
+  };
+  
+  const numColumns = getNumColumns();
+  const itemSpacing = isTV ? 24 : 16;
+  const containerPadding = isTV ? 48 : 12;
+  const itemWidth = (width - (containerPadding * 2) - (itemSpacing * (numColumns - 1))) / numColumns;
   
   // Trakt integration
   const {
@@ -270,6 +287,51 @@ const LibraryScreen = () => {
     };
   }, []);
 
+  // TV Event Handler for remote control navigation
+  useEffect(() => {
+    if (!isTV) return;
+
+    const handleTVEvent = (evt: any) => {
+      if (evt && evt.eventType === 'focus') {
+        // Handle focus events for TV navigation
+        console.log('TV Focus Event:', evt);
+      } else if (evt && evt.eventType === 'blur') {
+        // Handle blur events
+        console.log('TV Blur Event:', evt);
+      } else if (evt && evt.eventType === 'select') {
+        // Handle select/enter button press
+        console.log('TV Select Event:', evt);
+      } else if (evt && evt.eventType === 'longSelect') {
+        // Handle long press on select button
+        console.log('TV Long Select Event:', evt);
+      } else if (evt && evt.eventType === 'left') {
+        // Handle left arrow navigation
+        console.log('TV Left Event:', evt);
+      } else if (evt && evt.eventType === 'right') {
+        // Handle right arrow navigation
+        console.log('TV Right Event:', evt);
+      } else if (evt && evt.eventType === 'up') {
+        // Handle up arrow navigation
+        console.log('TV Up Event:', evt);
+      } else if (evt && evt.eventType === 'down') {
+        // Handle down arrow navigation
+        console.log('TV Down Event:', evt);
+      } else if (evt && evt.eventType === 'playPause') {
+        // Handle play/pause button
+        console.log('TV Play/Pause Event:', evt);
+      } else if (evt && evt.eventType === 'menu') {
+        // Handle menu button - could show filters or options
+        console.log('TV Menu Event:', evt);
+      }
+    };
+
+    const subscription = TVEventHandler.addListener(handleTVEvent);
+
+     return () => {
+       subscription?.remove();
+     };
+   }, [isTV]);
+
   const filteredItems = libraryItems.filter(item => {
     if (filter === 'all') return true;
     if (filter === 'movies') return item.type === 'movie';
@@ -328,15 +390,37 @@ const LibraryScreen = () => {
     return folders.filter(folder => folder.itemCount > 0);
   }, [traktAuthenticated, watchedMovies, watchedShows, watchlistMovies, watchlistShows, collectionMovies, collectionShows, continueWatching, ratedContent]);
 
-  const itemWidth = (width - 48) / 2; // 2 items per row with padding
+  // Use the TV-optimized itemWidth from above instead of hardcoded calculation
 
   const renderItem = ({ item }: { item: LibraryItem }) => (
     <TouchableOpacity
-      style={[styles.itemContainer, { width: itemWidth }]}
+      style={[
+        styles.itemContainer, 
+        { 
+          width: itemWidth,
+          marginHorizontal: itemSpacing / 2,
+        }
+      ]}
       onPress={() => navigation.navigate('Metadata', { id: item.id, type: item.type })}
       activeOpacity={0.7}
+      // TV optimizations
+      hasTVPreferredFocus={false}
+      tvParallaxProperties={{
+        enabled: true,
+        shiftDistanceX: 2.0,
+        shiftDistanceY: 2.0,
+        tiltAngle: 0.05,
+        magnification: 1.1,
+      }}
     >
-      <View style={[styles.posterContainer, { shadowColor: currentTheme.colors.black }]}>
+      <View style={[
+        styles.posterContainer, 
+        { 
+          shadowColor: currentTheme.colors.black,
+          // TV-optimized dimensions
+          height: itemWidth * 1.5, // 2:3 aspect ratio
+        }
+      ]}>
         <Image
           source={{ uri: item.poster || 'https://via.placeholder.com/300x450' }}
           style={styles.poster}
@@ -348,13 +432,24 @@ const LibraryScreen = () => {
           style={styles.posterGradient}
         >
           <Text 
-            style={[styles.itemTitle, { color: currentTheme.colors.white }]}
+            style={[
+              styles.itemTitle, 
+              { 
+                color: currentTheme.colors.white,
+                fontSize: width > 1920 ? 18 : width > 1280 ? 16 : 15, // Responsive font size
+              }
+            ]}
             numberOfLines={2}
           >
             {item.name}
           </Text>
           {item.lastWatched && (
-            <Text style={styles.lastWatched}>
+            <Text style={[
+              styles.lastWatched,
+              {
+                fontSize: width > 1920 ? 14 : width > 1280 ? 13 : 12, // Responsive font size
+              }
+            ]}>
               {item.lastWatched}
             </Text>
           )}
@@ -365,7 +460,11 @@ const LibraryScreen = () => {
             <View 
               style={[
                 styles.progressBar,
-                { width: `${item.progress * 100}%`, backgroundColor: currentTheme.colors.primary }
+                { 
+                  width: `${item.progress * 100}%`, 
+                  backgroundColor: currentTheme.colors.primary,
+                  height: width > 1920 ? 6 : 4, // Larger progress bar for TV
+                }
               ]} 
             />
           </View>
@@ -374,11 +473,17 @@ const LibraryScreen = () => {
           <View style={styles.badgeContainer}>
             <MaterialIcons
               name="live-tv"
-              size={14}
+              size={width > 1920 ? 18 : width > 1280 ? 16 : 14} // Responsive icon size
               color={currentTheme.colors.white}
               style={{ marginRight: 4 }}
             />
-            <Text style={[styles.badgeText, { color: currentTheme.colors.white }]}>Series</Text>
+            <Text style={[
+              styles.badgeText, 
+              { 
+                color: currentTheme.colors.white,
+                fontSize: width > 1920 ? 12 : width > 1280 ? 11 : 10, // Responsive font size
+              }
+            ]}>Series</Text>
           </View>
         )}
       </View>
@@ -388,31 +493,69 @@ const LibraryScreen = () => {
   // Render individual Trakt collection folder
   const renderTraktCollectionFolder = ({ folder }: { folder: TraktFolder }) => (
     <TouchableOpacity
-      style={[styles.itemContainer, { width: itemWidth }]}
+      style={[
+        styles.itemContainer, 
+        { 
+          width: itemWidth,
+          marginHorizontal: itemSpacing / 2,
+        }
+      ]}
       onPress={() => {
         setSelectedTraktFolder(folder.id);
         loadAllCollections(); // Load all collections when entering a specific folder
       }}
       activeOpacity={0.7}
+      // TV optimizations
+      hasTVPreferredFocus={false}
+      tvParallaxProperties={{
+        enabled: true,
+        shiftDistanceX: 2.0,
+        shiftDistanceY: 2.0,
+        tiltAngle: 0.05,
+        magnification: 1.1,
+      }}
     >
-      <View style={[styles.posterContainer, styles.folderContainer, { shadowColor: currentTheme.colors.black }]}>
+      <View style={[
+        styles.posterContainer, 
+        styles.folderContainer, 
+        { 
+          shadowColor: currentTheme.colors.black,
+          height: itemWidth * 1.5, // 2:3 aspect ratio
+        }
+      ]}>
         <LinearGradient
           colors={folder.gradient}
           style={styles.folderGradient}
         >
           <MaterialIcons 
             name={folder.icon} 
-            size={60} 
+            size={width > 1920 ? 80 : width > 1280 ? 70 : 60} // Responsive icon size
             color={currentTheme.colors.white} 
-            style={{ marginBottom: 12 }} 
+            style={{ marginBottom: width > 1920 ? 16 : 12 }} 
           />
-          <Text style={[styles.folderTitle, { color: currentTheme.colors.white }]}>
+          <Text style={[
+            styles.folderTitle, 
+            { 
+              color: currentTheme.colors.white,
+              fontSize: width > 1920 ? 22 : width > 1280 ? 20 : 18, // Responsive font size
+            }
+          ]}>
             {folder.name}
           </Text>
-          <Text style={styles.folderCount}>
+          <Text style={[
+            styles.folderCount,
+            {
+              fontSize: width > 1920 ? 14 : width > 1280 ? 13 : 12, // Responsive font size
+            }
+          ]}>
             {folder.itemCount} items
           </Text>
-          <Text style={styles.folderSubtitle}>
+          <Text style={[
+            styles.folderSubtitle,
+            {
+              fontSize: width > 1920 ? 14 : width > 1280 ? 13 : 12, // Responsive font size
+            }
+          ]}>
             {folder.description}
           </Text>
         </LinearGradient>
@@ -859,14 +1002,28 @@ const LibraryScreen = () => {
           return renderItem({ item: item as LibraryItem });
         }}
               keyExtractor={item => item.id}
-              numColumns={2}
-              contentContainerStyle={styles.listContainer}
+              numColumns={numColumns}
+              contentContainerStyle={[
+                styles.listContainer,
+                {
+                  paddingHorizontal: containerPadding,
+                  paddingVertical: width > 1920 ? 24 : width > 1280 ? 20 : 16,
+                  paddingBottom: width > 1920 ? 120 : 90,
+                }
+              ]}
               showsVerticalScrollIndicator={false}
-              columnWrapperStyle={styles.columnWrapper}
-              initialNumToRender={6}
-              maxToRenderPerBatch={6}
+              columnWrapperStyle={numColumns > 1 ? [
+                styles.columnWrapper,
+                {
+                  marginBottom: width > 1920 ? 24 : width > 1280 ? 20 : 16,
+                }
+              ] : undefined}
+              initialNumToRender={numColumns * 3}
+              maxToRenderPerBatch={numColumns * 2}
               windowSize={5}
               removeClippedSubviews={Platform.OS === 'android'}
+              // TV optimizations
+              getItemLayout={undefined} // Let FlatList calculate for TV focus
             />
     );
   };
@@ -1017,7 +1174,7 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   columnWrapper: {
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: 16,
   },
   skeletonContainer: {
@@ -1248,4 +1405,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LibraryScreen; 
+export default LibraryScreen;

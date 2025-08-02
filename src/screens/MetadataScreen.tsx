@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Dimensions,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -21,13 +22,6 @@ import { MovieContent } from '../components/metadata/MovieContent';
 import { MoreLikeThisSection } from '../components/metadata/MoreLikeThisSection';
 import { RatingsSection } from '../components/metadata/RatingsSection';
 import { RouteParams, Episode } from '../types/metadata';
-import Animated, {
-  useAnimatedStyle,
-  interpolate,
-  Extrapolate,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import { RouteProp } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -38,7 +32,6 @@ import { MetadataLoadingScreen } from '../components/loading/MetadataLoadingScre
 import HeroSection from '../components/metadata/HeroSection';
 import FloatingHeader from '../components/metadata/FloatingHeader';
 import MetadataDetails from '../components/metadata/MetadataDetails';
-import { useMetadataAnimations } from '../hooks/useMetadataAnimations';
 import { useMetadataAssets } from '../hooks/useMetadataAssets';
 import { useWatchProgress } from '../hooks/useWatchProgress';
 import { TraktService, TraktPlaybackItem } from '../services/traktService';
@@ -59,7 +52,7 @@ const MetadataScreen: React.FC = () => {
   const [isContentReady, setIsContentReady] = useState(false);
   const [showCastModal, setShowCastModal] = useState(false);
   const [selectedCastMember, setSelectedCastMember] = useState<any>(null);
-  const transitionOpacity = useSharedValue(1);
+  // Removed animation state
 
   const {
     metadata,
@@ -84,7 +77,6 @@ const MetadataScreen: React.FC = () => {
   // Optimized hooks with memoization
   const watchProgressData = useWatchProgress(id, type as 'movie' | 'series', episodeId, episodes);
   const assetData = useMetadataAssets(metadata, id, type, imdbId, settings, setMetadata);
-  const animations = useMetadataAnimations(safeAreaTop, watchProgressData.watchProgress);
 
   // Fetch and log Trakt progress data when entering the screen
   useEffect(() => {
@@ -192,11 +184,10 @@ const MetadataScreen: React.FC = () => {
   useEffect(() => {
     if (isReady) {
       setIsContentReady(true);
-      transitionOpacity.value = withTiming(1, { duration: 50 });
+      // Removed animation logic
     } else if (!isReady && isContentReady) {
-      setIsContentReady(false);
-      transitionOpacity.value = 0;
-    }
+        setIsContentReady(false);
+      }
   }, [isReady, isContentReady]);
 
   // Optimized callback functions with reduced dependencies
@@ -318,19 +309,7 @@ const MetadataScreen: React.FC = () => {
     setShowCastModal(true);
   }, []);
 
-  // Ultra-optimized animated styles - minimal calculations
-  const containerStyle = useAnimatedStyle(() => ({
-    opacity: animations.screenOpacity.value,
-  }), []);
-
-  const contentStyle = useAnimatedStyle(() => ({
-    opacity: animations.contentOpacity.value,
-    transform: [{ translateY: animations.uiElementsTranslateY.value }]
-  }), []);
-
-  const transitionStyle = useAnimatedStyle(() => ({
-    opacity: transitionOpacity.value,
-  }), []);
+  // Removed animated styles
 
   // Memoized error component for performance
   const ErrorComponent = useMemo(() => {
@@ -377,7 +356,7 @@ const MetadataScreen: React.FC = () => {
 
   return (
     <SafeAreaView 
-      style={[containerStyle, styles.container, { backgroundColor: currentTheme.colors.darkBackground }]}
+      style={[styles.container, { backgroundColor: currentTheme.colors.darkBackground }]}
       edges={['bottom']}
     >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" animated />
@@ -390,19 +369,14 @@ const MetadataScreen: React.FC = () => {
             logoLoadError={assetData.logoLoadError}
             handleBack={handleBack}
             handleToggleLibrary={handleToggleLibrary}
-            headerElementsY={animations.headerElementsY}
             inLibrary={inLibrary}
-            headerOpacity={animations.headerOpacity}
-            headerElementsOpacity={animations.headerElementsOpacity}
             safeAreaTop={safeAreaTop}
             setLogoLoadError={assetData.setLogoLoadError}
           />
 
-          <Animated.ScrollView
+          <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-            onScroll={animations.scrollHandler}
-            scrollEventThrottle={16}
             bounces={false}
             overScrollMode="never"
             contentContainerStyle={styles.scrollContent}
@@ -413,14 +387,6 @@ const MetadataScreen: React.FC = () => {
               bannerImage={assetData.bannerImage}
               loadingBanner={assetData.loadingBanner}
               logoLoadError={assetData.logoLoadError}
-              scrollY={animations.scrollY}
-              heroHeight={animations.heroHeight}
-              heroOpacity={animations.heroOpacity}
-              logoOpacity={animations.logoOpacity}
-              buttonsOpacity={animations.buttonsOpacity}
-              buttonsTranslateY={animations.buttonsTranslateY}
-              watchProgressOpacity={animations.watchProgressOpacity}
-              watchProgressWidth={animations.watchProgressWidth}
               watchProgress={watchProgressData.watchProgress}
               type={type as 'movie' | 'series'}
               getEpisodeDetails={watchProgressData.getEpisodeDetails}
@@ -436,7 +402,7 @@ const MetadataScreen: React.FC = () => {
             />
 
             {/* Main Content - Optimized */}
-            <Animated.View style={contentStyle}>
+            <View>
               <MetadataDetails 
                 metadata={metadata}
                 imdbId={imdbId}
@@ -475,8 +441,8 @@ const MetadataScreen: React.FC = () => {
               ) : (
                 metadata && <MovieContent metadata={metadata} />
               )}
-            </Animated.View>
-          </Animated.ScrollView>
+            </View>
+          </ScrollView>
         </>
       )}
       

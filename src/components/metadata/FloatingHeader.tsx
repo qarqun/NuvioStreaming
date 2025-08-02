@@ -11,11 +11,6 @@ import { BlurView as ExpoBlurView } from 'expo-blur';
 import { BlurView as CommunityBlurView } from '@react-native-community/blur';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import Animated, {
-  useAnimatedStyle,
-  interpolate,
-  Extrapolate,
-} from 'react-native-reanimated';
 import { useTheme } from '../../contexts/ThemeContext';
 import { logger } from '../../utils/logger';
 
@@ -27,9 +22,6 @@ interface FloatingHeaderProps {
   handleBack: () => void;
   handleToggleLibrary: () => void;
   inLibrary: boolean;
-  headerOpacity: Animated.SharedValue<number>;
-  headerElementsY: Animated.SharedValue<number>;
-  headerElementsOpacity: Animated.SharedValue<number>;
   safeAreaTop: number;
   setLogoLoadError: (error: boolean) => void;
 }
@@ -40,37 +32,20 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
   handleBack,
   handleToggleLibrary,
   inLibrary,
-  headerOpacity,
-  headerElementsY,
-  headerElementsOpacity,
   safeAreaTop,
   setLogoLoadError,
 }) => {
   const { currentTheme } = useTheme();
   
-  // Animated styles for the header
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: headerOpacity.value,
-    transform: [
-      { translateY: interpolate(headerOpacity.value, [0, 1], [-20, 0], Extrapolate.CLAMP) }
-    ]
-  }));
-  
-  // Animated style for header elements
-  const headerElementsStyle = useAnimatedStyle(() => ({
-    opacity: headerElementsOpacity.value,
-    transform: [{ translateY: headerElementsY.value }]
-  }));
-  
   return (
-    <Animated.View style={[styles.floatingHeader, headerAnimatedStyle]}>
+    <View style={styles.floatingHeader}>
       {Platform.OS === 'ios' ? (
         <ExpoBlurView
           intensity={50}
           tint="dark"
           style={[styles.blurContainer, { paddingTop: Math.max(safeAreaTop * 0.8, safeAreaTop - 6) }]}
         >
-          <Animated.View style={[styles.floatingHeaderContent, headerElementsStyle]}>
+          <View style={styles.floatingHeaderContent}>
             <TouchableOpacity 
               style={styles.backButton} 
               onPress={handleBack}
@@ -111,7 +86,7 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
                 color={currentTheme.colors.highEmphasis}
               />
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </ExpoBlurView>
       ) : (
         <View style={[styles.blurContainer, { paddingTop: Math.max(safeAreaTop * 0.8, safeAreaTop - 6) }]}>
@@ -121,7 +96,7 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
             blurAmount={15}
             reducedTransparencyFallbackColor="rgba(20, 20, 20, 0.9)"
           />
-          <Animated.View style={[styles.floatingHeaderContent, headerElementsStyle]}>
+          <View style={styles.floatingHeaderContent}>
             <TouchableOpacity 
               style={styles.backButton} 
               onPress={handleBack}
@@ -162,11 +137,11 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
                 color={currentTheme.colors.highEmphasis}
               />
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </View>
       )}
       {Platform.OS === 'ios' && <View style={[styles.headerBottomBorder, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />}
-    </Animated.View>
+    </View>
   );
 };
 
@@ -240,4 +215,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default React.memo(FloatingHeader); 
+export default React.memo(FloatingHeader);

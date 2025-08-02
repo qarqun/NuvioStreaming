@@ -11,7 +11,7 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+// Removed react-native-reanimated import
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -572,7 +572,7 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
   }
 
   return (
-    <Animated.View entering={FadeIn.duration(300).delay(150)} style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Text style={[styles.title, { color: currentTheme.colors.text }]}>Continue Watching</Text>
@@ -609,13 +609,9 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
               
               {/* Delete Indicator Overlay */}
               {deletingItemId === item.id && (
-                <Animated.View 
-                  entering={FadeIn.duration(200)}
-                  exiting={FadeOut.duration(200)}
-                  style={styles.deletingOverlay}
-                >
+                <View style={styles.deletingOverlay}>
                   <ActivityIndicator size="large" color="#FFFFFF" />
-                </Animated.View>
+                </View>
               )}
             </View>
 
@@ -700,7 +696,7 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
         snapToAlignment="start"
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
       />
-    </Animated.View>
+    </View>
   );
 });
 

@@ -13,14 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
+// Removed react-native-reanimated imports
 import { useTheme } from '../contexts/ThemeContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -77,18 +70,14 @@ const OnboardingScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
-  const progressValue = useSharedValue(0);
-
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: withSpring(`${((currentIndex + 1) / onboardingData.length) * 100}%`),
-  }));
+  // Removed animated progress values
 
   const handleNext = () => {
     if (currentIndex < onboardingData.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
       flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      progressValue.value = (nextIndex + 1) / onboardingData.length;
+      // Removed progress animation
     } else {
       handleGetStarted();
     }
@@ -125,22 +114,16 @@ const OnboardingScreen = () => {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Animated.View
-            entering={FadeInDown.delay(300).duration(800)}
-            style={styles.iconWrapper}
-          >
+          <View style={styles.iconWrapper}>
             <MaterialIcons 
               name={item.icon} 
               size={80} 
               color="white" 
             />
-          </Animated.View>
+          </View>
         </LinearGradient>
 
-        <Animated.View
-          entering={FadeInUp.delay(500).duration(800)}
-          style={styles.textContainer}
-        >
+        <View style={styles.textContainer}>
           <Text style={[styles.title, { color: currentTheme.colors.highEmphasis }]}>
             {item.title}
           </Text>
@@ -150,7 +133,7 @@ const OnboardingScreen = () => {
           <Text style={[styles.description, { color: currentTheme.colors.mediumEmphasis }]}>
             {item.description}
           </Text>
-        </Animated.View>
+        </View>
       </View>
     );
   };
@@ -188,11 +171,10 @@ const OnboardingScreen = () => {
         
         {/* Progress Bar */}
         <View style={[styles.progressContainer, { backgroundColor: currentTheme.colors.elevation1 }]}>
-          <Animated.View 
+          <View 
             style={[
               styles.progressBar, 
-              { backgroundColor: currentTheme.colors.primary },
-              animatedProgressStyle
+              { backgroundColor: currentTheme.colors.primary, width: `${((currentIndex + 1) / onboardingData.length) * 100}%` }
             ]} 
           />
         </View>
@@ -370,4 +352,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OnboardingScreen; 
+export default OnboardingScreen;

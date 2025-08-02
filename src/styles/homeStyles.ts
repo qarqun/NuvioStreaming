@@ -4,8 +4,9 @@ const { width, height } = Dimensions.get('window');
 
 // Dynamic poster calculation based on screen width
 const calculatePosterLayout = (screenWidth: number) => {
-  const MIN_POSTER_WIDTH = 110; // Minimum poster width for readability
-  const MAX_POSTER_WIDTH = 140; // Maximum poster width to prevent oversized posters
+  // TV gets larger posters
+  const MIN_POSTER_WIDTH = Platform.isTV ? 140 : 110;
+  const MAX_POSTER_WIDTH = Platform.isTV ? 180 : 140;
   const HORIZONTAL_PADDING = 50; // Total horizontal padding/margins
   
   // Calculate how many posters can fit
@@ -62,4 +63,4 @@ export default {
   POSTER_WIDTH,
   POSTER_HEIGHT,
   HORIZONTAL_PADDING,
-}; 
+};

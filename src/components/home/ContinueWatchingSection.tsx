@@ -9,7 +9,9 @@ import {
   AppState,
   AppStateStatus,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform,
+  Animated
 } from 'react-native';
 // Removed react-native-reanimated import
 import { useNavigation } from '@react-navigation/native';
@@ -41,8 +43,9 @@ interface ContinueWatchingRef {
 
 // Dynamic poster calculation based on screen width for Continue Watching section
 const calculatePosterLayout = (screenWidth: number) => {
-  const MIN_POSTER_WIDTH = 120; // Slightly larger for continue watching items
-  const MAX_POSTER_WIDTH = 160; // Maximum poster width for this section
+  // TV gets larger posters
+  const MIN_POSTER_WIDTH = Platform.isTV ? 160 : 120;
+  const MAX_POSTER_WIDTH = Platform.isTV ? 200 : 160;
   const HORIZONTAL_PADDING = 40; // Total horizontal padding/margins
   
   // Calculate how many posters can fit (fewer items for continue watching)
@@ -88,6 +91,160 @@ const isEpisodeReleased = (video: any): boolean => {
 };
 
 // Create a proper imperative handle with React.forwardRef and updated type
+// Continue Watching Item Component with TV Focus Animations
+const ContinueWatchingItem = React.memo(({ item, onPress, onLongPress, deletingItemId, currentTheme }: {
+  item: ContinueWatchingItem;
+  onPress: () => void;
+  onLongPress: () => void;
+  deletingItemId: string | null;
+  currentTheme: any;
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+  
+  // Animation values for TV focus effects
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  // TV Focus handlers
+  const handleFocus = useCallback(() => {
+    if (Platform.isTV) {
+      setIsFocused(true);
+      Animated.spring(scaleAnim, {
+        toValue: 1.08,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 6,
+      }).start();
+    }
+  }, [scaleAnim]);
+
+  const handleBlur = useCallback(() => {
+    if (Platform.isTV) {
+      setIsFocused(false);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 6,
+      }).start();
+    }
+  }, [scaleAnim]);
+
+  // Dynamic styles for focus effects
+  const animatedContainerStyle = {
+    transform: [{ scale: scaleAnim }],
+    zIndex: isFocused && Platform.isTV ? 10 : 1,
+  };
+
+  return (
+    <Animated.View style={animatedContainerStyle}>
+      <TouchableOpacity
+        style={[styles.wideContentItem, {
+          backgroundColor: currentTheme.colors.elevation1,
+          borderColor: currentTheme.colors.border,
+          shadowColor: currentTheme.colors.black
+        }]}
+        activeOpacity={0.8}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={800}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        hasTVPreferredFocus={false}
+      >
+          {/* Poster Image */}
+          <View style={styles.posterContainer}>
+            <ExpoImage
+              source={{ uri: item.poster || 'https://via.placeholder.com/300x450' }}
+              style={styles.continueWatchingPoster}
+              contentFit="cover"
+              cachePolicy="memory"
+              transition={200}
+              placeholder={{ uri: 'https://via.placeholder.com/300x450' }}
+              placeholderContentFit="cover"
+              recyclingKey={item.id}
+            />
+            
+            {/* Delete Indicator Overlay */}
+            {deletingItemId === item.id && (
+              <View style={styles.deletingOverlay}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              </View>
+            )}
+          </View>
+
+          {/* Content Details */}
+          <View style={styles.contentDetails}>
+            <View style={styles.titleRow}>
+              {(() => {
+                const isUpNext = item.progress === 0;
+                return (
+                  <View style={styles.titleRow}>
+                    <Text 
+                      style={[styles.contentTitle, { color: currentTheme.colors.highEmphasis }]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    {isUpNext && (
+                    <View style={[styles.progressBadge, { backgroundColor: currentTheme.colors.primary }]}>
+                        <Text style={styles.progressText}>Up Next</Text>
+                    </View>
+                    )}
+                  </View>
+                );
+              })()}
+            </View>
+
+            {/* Episode Info or Year */}
+            {(() => {
+              if (item.type === 'series' && item.season && item.episode) {
+                return (
+                  <View style={styles.episodeRow}>
+                    <Text style={[styles.episodeText, { color: currentTheme.colors.mediumEmphasis }]}>
+                      Season {item.season}
+                    </Text>
+                    {item.episodeTitle && (
+                      <Text 
+                        style={[styles.episodeTitle, { color: currentTheme.colors.mediumEmphasis }]}
+                        numberOfLines={1}
+                      >
+                        Episode {item.episode}: {item.episodeTitle}
+                      </Text>
+                    )}
+                  </View>
+                );
+              } else {
+                return (
+                  <Text style={[styles.yearText, { color: currentTheme.colors.mediumEmphasis }]}>
+                    {item.year}
+                  </Text>
+                );
+              }
+            })()}
+
+            {/* Progress Bar */}
+            <View style={styles.wideProgressContainer}>
+              <View style={styles.wideProgressTrack}>
+                <View 
+                  style={[
+                    styles.wideProgressBar, 
+                    { 
+                      backgroundColor: currentTheme.colors.primary,
+                      width: `${item.progress}%`
+                    }
+                  ]} 
+                />
+              </View>
+              <Text style={[styles.progressLabel, { color: currentTheme.colors.mediumEmphasis }]}>
+                {item.progress}% watched
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
 const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, ref) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { currentTheme } = useTheme();
@@ -583,109 +740,13 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
       <FlatList
         data={continueWatchingItems}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.wideContentItem, {
-              backgroundColor: currentTheme.colors.elevation1,
-              borderColor: currentTheme.colors.border,
-              shadowColor: currentTheme.colors.black
-            }]}
-            activeOpacity={0.8}
+          <ContinueWatchingItem
+            item={item}
             onPress={() => handleContentPress(item.id, item.type)}
             onLongPress={() => handleLongPress(item)}
-            delayLongPress={800}
-          >
-            {/* Poster Image */}
-            <View style={styles.posterContainer}>
-              <ExpoImage
-                source={{ uri: item.poster || 'https://via.placeholder.com/300x450' }}
-                style={styles.continueWatchingPoster}
-                contentFit="cover"
-                cachePolicy="memory"
-                transition={200}
-                placeholder={{ uri: 'https://via.placeholder.com/300x450' }}
-                placeholderContentFit="cover"
-                recyclingKey={item.id}
-              />
-              
-              {/* Delete Indicator Overlay */}
-              {deletingItemId === item.id && (
-                <View style={styles.deletingOverlay}>
-                  <ActivityIndicator size="large" color="#FFFFFF" />
-                </View>
-              )}
-            </View>
-
-            {/* Content Details */}
-            <View style={styles.contentDetails}>
-              <View style={styles.titleRow}>
-                {(() => {
-                  const isUpNext = item.progress === 0;
-                  return (
-                    <View style={styles.titleRow}>
-                      <Text 
-                        style={[styles.contentTitle, { color: currentTheme.colors.highEmphasis }]}
-                        numberOfLines={1}
-                      >
-                        {item.name}
-                      </Text>
-                      {isUpNext && (
-                      <View style={[styles.progressBadge, { backgroundColor: currentTheme.colors.primary }]}>
-                          <Text style={styles.progressText}>Up Next</Text>
-                      </View>
-                      )}
-                    </View>
-                  );
-                })()}
-              </View>
-
-              {/* Episode Info or Year */}
-              {(() => {
-                if (item.type === 'series' && item.season && item.episode) {
-                  return (
-                    <View style={styles.episodeRow}>
-                      <Text style={[styles.episodeText, { color: currentTheme.colors.mediumEmphasis }]}>
-                        Season {item.season}
-                      </Text>
-                      {item.episodeTitle && (
-                        <Text 
-                          style={[styles.episodeTitle, { color: currentTheme.colors.mediumEmphasis }]}
-                          numberOfLines={1}
-                        >
-                          {item.episodeTitle}
-                        </Text>
-                      )}
-                    </View>
-                  );
-                } else {
-                  return (
-                    <Text style={[styles.yearText, { color: currentTheme.colors.mediumEmphasis }]}>
-                      {item.year} • {item.type === 'movie' ? 'Movie' : 'Series'}
-                    </Text>
-                  );
-                }
-              })()}
-
-              {/* Progress Bar */}
-              {item.progress > 0 && (
-                <View style={styles.wideProgressContainer}>
-                  <View style={styles.wideProgressTrack}>
-                    <View 
-                      style={[
-                        styles.wideProgressBar, 
-                        { 
-                          width: `${item.progress}%`, 
-                          backgroundColor: currentTheme.colors.primary 
-                        }
-                      ]} 
-                    />
-                  </View>
-                  <Text style={[styles.progressLabel, { color: currentTheme.colors.textMuted }]}>
-                    {Math.round(item.progress)}% watched
-                  </Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
+            deletingItemId={deletingItemId}
+            currentTheme={currentTheme}
+          />
         )}
         keyExtractor={(item) => `continue-${item.id}-${item.type}`}
         horizontal
@@ -695,6 +756,16 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
         decelerationRate="fast"
         snapToAlignment="start"
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        // TV-specific focus navigation properties
+        {...(Platform.isTV && {
+          directionalLockEnabled: true,
+          horizontal: true,
+          scrollEnabled: true,
+          focusable: false,
+          tvParallaxProperties: {
+            enabled: false,
+          },
+        })}
       />
     </View>
   );
@@ -705,6 +776,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     paddingTop: 0,
     marginTop: 12,
+    overflow: 'visible',
+    paddingVertical: Platform.isTV ? 8 : 0,
   },
   header: {
     flexDirection: 'row',
@@ -735,6 +808,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     paddingTop: 4,
+    paddingVertical: Platform.isTV ? 12 : 4,
+    overflow: 'visible',
   },
   wideContentItem: {
     width: 280,

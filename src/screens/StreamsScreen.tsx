@@ -15,6 +15,7 @@ import {
   Dimensions,
   Linking,
   Clipboard,
+  TVEventHandler,
 } from 'react-native';
 
 
@@ -74,6 +75,8 @@ const StreamCard = memo(({ stream, onPress, index, isLoading, statusMessage, the
   showLogos?: boolean;
 }) => {
   
+
+  
   // Handle long press to copy stream URL to clipboard
   const handleLongPress = useCallback(async () => {
     if (stream.url) {
@@ -94,7 +97,6 @@ const StreamCard = memo(({ stream, onPress, index, isLoading, statusMessage, the
       }
     }
   }, [stream.url]);
-  const styles = React.useMemo(() => createStyles(theme.colors), [theme.colors]);
   
   const streamInfo = useMemo(() => {
     const title = stream.title || '';
@@ -170,77 +172,305 @@ const StreamCard = memo(({ stream, onPress, index, isLoading, statusMessage, the
     };
   }, [stream.addonId, stream.addon]);
   
+  const isTV = Platform.isTV;
+  
+  // Horizontal TV-optimized card design
+  const cardStyle = {
+    flexDirection: 'row' as const,
+    alignItems: 'stretch' as const,
+    backgroundColor: isTV ? '#1a1a1a' : theme.colors.card,
+    borderRadius: isTV ? 24 : 12,
+    marginHorizontal: isTV ? 0 : 8,
+    marginVertical: isTV ? 16 : 8,
+    minHeight: isTV ? 160 : 90,
+    overflow: 'hidden' as const,
+    borderWidth: isTV ? 3 : 1,
+    borderColor: isTV ? '#333333' : theme.colors.cardHighlight,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: isTV ? 16 : 6 },
+    shadowOpacity: isTV ? 0.7 : 0.25,
+    shadowRadius: isTV ? 24 : 10,
+    elevation: isTV ? 20 : 6,
+    // Force visibility on TV
+    opacity: 1,
+    zIndex: isTV ? 10 : 1,
+  };
+  
+
+  
   return (
     <TouchableOpacity 
         style={[
-          styles.streamCard, 
-          isLoading && styles.streamCardLoading
+          cardStyle,
+          isLoading && { opacity: 0.75 }
         ]} 
         onPress={onPress}
         onLongPress={handleLongPress}
         disabled={isLoading}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
+        hasTVPreferredFocus={index === 0 && isTV}
+        tvParallaxProperties={isTV ? {
+          enabled: true,
+          shiftDistanceX: 10.0,
+          shiftDistanceY: 10.0,
+          tiltAngle: 0.25,
+          magnification: 1.08,
+          pressMagnification: 0.92,
+          pressDuration: 0.12,
+        } : undefined}
       >
-        {/* Scraper Logo */}
-        {showLogos && scraperLogo && (
-          <View style={styles.scraperLogoContainer}>
-            <Image
-              source={{ uri: scraperLogo }}
-              style={styles.scraperLogo}
-              resizeMode="contain"
-            />
-          </View>
-        )}
-        
-        <View style={styles.streamDetails}>
-          <View style={styles.streamNameRow}>
-            <View style={styles.streamTitleContainer}>
-              <Text style={[styles.streamName, { color: theme.colors.highEmphasis }]}>
-                {streamInfo.displayName}
-              </Text>
-              {streamInfo.subTitle && (
-                <Text style={[styles.streamAddonName, { color: theme.colors.mediumEmphasis }]}>
-                  {streamInfo.subTitle}
-                </Text>
-              )}
+        {/* Left Section - Logo and Quality Indicators */}
+        <View style={{
+          width: isTV ? 140 : 90,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: isTV ? '#2a2a2a' : 'rgba(0, 0, 0, 0.3)',
+          paddingVertical: isTV ? 24 : 16,
+          paddingHorizontal: isTV ? 20 : 12,
+          borderTopLeftRadius: isTV ? 24 : 12,
+          borderBottomLeftRadius: isTV ? 24 : 12,
+        }}>
+          {/* Scraper Logo */}
+          {showLogos && scraperLogo ? (
+            <View style={{
+              width: isTV ? 72 : 48,
+              height: isTV ? 72 : 48,
+              marginBottom: isTV ? 16 : 10,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.12)',
+              borderRadius: isTV ? 20 : 12,
+              borderWidth: isTV ? 3 : 2,
+              borderColor: 'rgba(255, 255, 255, 0.25)',
+            }}>
+              <Image
+                source={{ uri: scraperLogo }}
+                style={{
+                  width: isTV ? 56 : 36,
+                  height: isTV ? 56 : 36,
+                }}
+                resizeMode="contain"
+              />
             </View>
-            
-            {/* Show loading indicator if stream is loading */}
-            {isLoading && (
-              <View style={styles.loadingIndicator}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={[styles.loadingText, { color: theme.colors.primary }]}>
-                  {statusMessage || "Loading..."}
-                </Text>
-              </View>
-            )}
-          </View>
+          ) : (
+            <View style={{
+              width: isTV ? 72 : 48,
+              height: isTV ? 72 : 48,
+              marginBottom: isTV ? 16 : 10,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: isTV ? 20 : 12,
+              borderWidth: isTV ? 3 : 2,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
+            }}>
+              <MaterialIcons 
+                name="movie" 
+                size={isTV ? 40 : 24} 
+                color="rgba(255, 255, 255, 0.5)" 
+              />
+            </View>
+          )}
           
-          <View style={styles.streamMetaRow}>
-            {streamInfo.isDolby && (
-              <QualityBadge type="VISION" />
-            )}
-            
-            {streamInfo.size && (
-              <View style={[styles.chip, { backgroundColor: theme.colors.darkGray }]}>
-                <Text style={[styles.chipText, { color: theme.colors.white }]}>💾 {streamInfo.size}</Text>
+          {/* Quality and HDR Badges */}
+          <View style={{
+            alignItems: 'center',
+            gap: isTV ? 8 : 4,
+          }}>
+            {streamInfo.quality && (
+              <View style={{
+                backgroundColor: theme.colors.primary,
+                paddingHorizontal: isTV ? 16 : 10,
+                paddingVertical: isTV ? 8 : 5,
+                borderRadius: isTV ? 12 : 8,
+                borderWidth: isTV ? 2 : 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+              }}>
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: isTV ? 16 : 12,
+                  fontWeight: '900',
+                  textAlign: 'center',
+                  textShadowColor: 'rgba(0,0,0,0.5)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 2,
+                }}>{streamInfo.quality}p</Text>
               </View>
             )}
             
-            {streamInfo.isDebrid && (
-              <View style={[styles.chip, { backgroundColor: theme.colors.success }]}>
-                <Text style={[styles.chipText, { color: theme.colors.white }]}>DEBRID</Text>
+            {streamInfo.isDolby && (
+              <View style={{
+                backgroundColor: '#FF6B35',
+                paddingHorizontal: isTV ? 12 : 8,
+                paddingVertical: isTV ? 6 : 4,
+                borderRadius: isTV ? 10 : 6,
+                borderWidth: isTV ? 2 : 1,
+                borderColor: '#FF8C69',
+              }}>
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: isTV ? 14 : 10,
+                  fontWeight: '800',
+                  textAlign: 'center',
+                }}>HDR</Text>
               </View>
             )}
           </View>
         </View>
         
-        <View style={styles.streamAction}>
-          <MaterialIcons 
-            name="play-arrow" 
-            size={24} 
-            color={theme.colors.primary} 
-          />
+        {/* Center Section - Stream Information */}
+        <View style={{
+          flex: 1,
+          paddingVertical: isTV ? 28 : 20,
+          paddingHorizontal: isTV ? 24 : 16,
+          justifyContent: 'space-between',
+        }}>
+          {/* Title Section */}
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <Text style={{
+              fontSize: isTV ? 28 : 18,
+              fontWeight: '900',
+              color: isTV ? '#FFFFFF' : theme.colors.highEmphasis,
+              lineHeight: isTV ? 36 : 24,
+              marginBottom: isTV ? 12 : 6,
+              textShadowColor: isTV ? 'rgba(0,0,0,0.9)' : 'transparent',
+              textShadowOffset: isTV ? { width: 2, height: 2 } : { width: 0, height: 0 },
+              textShadowRadius: isTV ? 4 : 0,
+            }} numberOfLines={isTV ? 2 : 1}>
+              {streamInfo.displayName}
+            </Text>
+            
+            {streamInfo.subTitle && (
+              <Text style={{
+                fontSize: isTV ? 20 : 15,
+                color: isTV ? 'rgba(255, 255, 255, 0.85)' : theme.colors.mediumEmphasis,
+                lineHeight: isTV ? 28 : 22,
+                fontWeight: isTV ? '700' : '600',
+                marginBottom: isTV ? 16 : 8,
+                textShadowColor: isTV ? 'rgba(0,0,0,0.7)' : 'transparent',
+                textShadowOffset: isTV ? { width: 1, height: 1 } : { width: 0, height: 0 },
+                textShadowRadius: isTV ? 2 : 0,
+              }} numberOfLines={isTV ? 2 : 1}>
+                {streamInfo.subTitle}
+              </Text>
+            )}
+          </View>
+          
+          {/* Bottom Section - Size and Debrid */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: isTV ? 16 : 8,
+          }}>
+            {streamInfo.size && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                paddingHorizontal: isTV ? 16 : 12,
+                paddingVertical: isTV ? 10 : 6,
+                borderRadius: isTV ? 12 : 8,
+                borderWidth: isTV ? 2 : 1,
+                borderColor: 'rgba(255, 255, 255, 0.25)',
+              }}>
+                <MaterialIcons 
+                  name="storage" 
+                  size={isTV ? 20 : 14} 
+                  color="rgba(255, 255, 255, 0.9)" 
+                  style={{ marginRight: isTV ? 8 : 6 }}
+                />
+                <Text style={{
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontSize: isTV ? 16 : 13,
+                  fontWeight: '700',
+                }}>{streamInfo.size}</Text>
+              </View>
+            )}
+            
+            {streamInfo.isDebrid && (
+              <View style={{
+                backgroundColor: '#00C851',
+                paddingHorizontal: isTV ? 16 : 12,
+                paddingVertical: isTV ? 10 : 6,
+                borderRadius: isTV ? 12 : 8,
+                borderWidth: isTV ? 2 : 1,
+                borderColor: '#00E676',
+                shadowColor: '#00C851',
+                shadowOffset: { width: 0, height: isTV ? 4 : 2 },
+                shadowOpacity: isTV ? 0.6 : 0.3,
+                shadowRadius: isTV ? 8 : 4,
+                elevation: isTV ? 8 : 4,
+              }}>
+                <Text style={{
+                  color: '#FFFFFF',
+                  fontSize: isTV ? 16 : 13,
+                  fontWeight: '800',
+                  textShadowColor: 'rgba(0,0,0,0.3)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 2,
+                }}>PREMIUM</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        
+        {/* Right Section - Play Button and Loading */}
+        <View style={{
+          width: isTV ? 120 : 80,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: isTV ? 24 : 16,
+          paddingHorizontal: isTV ? 20 : 12,
+          backgroundColor: isTV ? '#2a2a2a' : 'rgba(0, 0, 0, 0.1)',
+          borderTopRightRadius: isTV ? 24 : 12,
+          borderBottomRightRadius: isTV ? 24 : 12,
+        }}>
+          {isLoading ? (
+            <View style={{
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: isTV ? 24 : 16,
+              padding: isTV ? 20 : 12,
+              borderWidth: isTV ? 3 : 2,
+              borderColor: theme.colors.primary,
+            }}>
+              <ActivityIndicator size={isTV ? "large" : "small"} color={theme.colors.primary} />
+              <Text style={{
+                color: theme.colors.primary,
+                fontSize: isTV ? 14 : 11,
+                marginTop: isTV ? 12 : 6,
+                fontWeight: '700',
+                textAlign: 'center',
+              }} numberOfLines={1}>
+                {statusMessage || "Loading"}
+              </Text>
+            </View>
+          ) : (
+            <View style={{
+              width: isTV ? 96 : 60,
+              height: isTV ? 96 : 60,
+              borderRadius: isTV ? 48 : 30,
+              backgroundColor: theme.colors.primary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderWidth: isTV ? 5 : 3,
+              borderColor: '#FFFFFF',
+              shadowColor: theme.colors.primary,
+              shadowOffset: { width: 0, height: isTV ? 12 : 6 },
+              shadowOpacity: isTV ? 0.8 : 0.4,
+              shadowRadius: isTV ? 16 : 8,
+              elevation: isTV ? 16 : 8,
+            }}>
+              <MaterialIcons 
+                name="play-arrow" 
+                size={isTV ? 56 : 36} 
+                color="#FFFFFF" 
+                style={{ marginLeft: isTV ? 6 : 3 }}
+              />
+            </View>
+          )}
         </View>
       </TouchableOpacity>
   );
@@ -304,23 +534,37 @@ const ProviderFilter = memo(({
 }) => {
   const styles = React.useMemo(() => createStyles(theme.colors), [theme.colors]);
   
-  const renderItem = useCallback(({ item, index }: { item: { id: string; name: string }; index: number }) => (
-    <TouchableOpacity
-        key={item.id}
-        style={[
-          styles.filterChip,
-          selectedProvider === item.id && styles.filterChipSelected
-        ]}
-        onPress={() => onSelect(item.id)}
-      >
-        <Text style={[
-          styles.filterChipText,
-          selectedProvider === item.id && styles.filterChipTextSelected
-        ]}>
-          {item.name}
-        </Text>
-      </TouchableOpacity>
-  ), [selectedProvider, onSelect, styles]);
+  const renderItem = useCallback(({ item, index }: { item: { id: string; name: string }; index: number }) => {
+    const isTV = Platform.isTV;
+    
+    return (
+      <TouchableOpacity
+          key={item.id}
+          style={[
+            styles.filterChip,
+            selectedProvider === item.id && styles.filterChipSelected
+          ]}
+          onPress={() => onSelect(item.id)}
+          hasTVPreferredFocus={index === 0 && isTV}
+          tvParallaxProperties={isTV ? {
+            enabled: true,
+            shiftDistanceX: 2.0,
+            shiftDistanceY: 2.0,
+            tiltAngle: 0.05,
+            magnification: 1.05,
+            pressMagnification: 0.95,
+            pressDuration: 0.3,
+          } : undefined}
+        >
+          <Text style={[
+            styles.filterChipText,
+            selectedProvider === item.id && styles.filterChipTextSelected
+          ]}>
+            {item.name}
+          </Text>
+        </TouchableOpacity>
+    );
+  }, [selectedProvider, onSelect, styles]);
 
   return (
     <View>
@@ -334,10 +578,11 @@ const ProviderFilter = memo(({
         bounces={true}
         overScrollMode="never"
         decelerationRate="fast"
-        initialNumToRender={5}
-        maxToRenderPerBatch={3}
-        windowSize={3}
-        getItemLayout={(data, index) => ({
+        initialNumToRender={Platform.isTV ? 8 : 5}
+        maxToRenderPerBatch={Platform.isTV ? 5 : 3}
+        windowSize={Platform.isTV ? 5 : 3}
+        removeClippedSubviews={!Platform.isTV}
+        getItemLayout={Platform.isTV ? undefined : (data, index) => ({
           length: 100, // Approximate width of each item
           offset: 100 * index,
           index,
@@ -1155,6 +1400,14 @@ export const StreamsScreen = () => {
   const sections = useMemo(() => {
     const streams = type === 'series' ? episodeStreams : groupedStreams;
     const installedAddons = stremioService.getInstalledAddons();
+    
+    console.log('[StreamsScreen] Sections creation debug:');
+    console.log('  type:', type);
+    console.log('  episodeStreams:', episodeStreams);
+    console.log('  groupedStreams:', groupedStreams);
+    console.log('  streams (selected):', streams);
+    console.log('  selectedProvider:', selectedProvider);
+    console.log('  installedAddons:', installedAddons);
 
     // Filter streams by selected provider
     const filteredEntries = Object.entries(streams)
@@ -1278,6 +1531,10 @@ export const StreamsScreen = () => {
   const loadElapsed = streamsLoadStart ? Date.now() - streamsLoadStart : 0;
   const showInitialLoading = streamsEmpty && (streamsLoadStart === null || loadElapsed < 10000);
   const showStillFetching = streamsEmpty && loadElapsed >= 10000;
+  
+
+
+
 
   const heroStyle = useAnimatedStyle(() => ({
     transform: [{ scale: heroScale.value }],
@@ -1303,6 +1560,8 @@ export const StreamsScreen = () => {
     // Don't show loading for individual streams that are already available and displayed
     const isLoading = false; // If streams are being rendered, they're available and shouldn't be loading
     
+
+    
     return (
       <StreamCard 
         key={`${stream.url}-${index}`}
@@ -1321,13 +1580,50 @@ export const StreamsScreen = () => {
     const isProviderLoading = loadingProviders[section.addonId];
     
     return (
-      <View style={styles.sectionHeaderContainer}>
-        <View style={styles.sectionHeaderContent}>
-          <Text style={styles.streamGroupTitle}>{section.title}</Text>
+      <View style={{
+        padding: Platform.isTV ? 0 : 16,
+        paddingHorizontal: Platform.isTV ? 0 : 16,
+        paddingVertical: Platform.isTV ? 12 : 0,
+        backgroundColor: Platform.isTV ? 'rgba(0,0,0,0.6)' : 'transparent',
+        borderRadius: Platform.isTV ? 12 : 0,
+        marginBottom: Platform.isTV ? 8 : 0,
+        borderWidth: Platform.isTV ? 1 : 0,
+        borderColor: Platform.isTV ? '#333333' : 'transparent',
+      }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <Text style={{
+            color: Platform.isTV ? '#FFFFFF' : colors.highEmphasis,
+            fontSize: Platform.isTV ? 20 : 15,
+            fontWeight: Platform.isTV ? '800' : '700',
+            marginBottom: Platform.isTV ? 0 : 8,
+            marginTop: 0,
+            backgroundColor: 'transparent',
+            textShadowColor: Platform.isTV ? 'rgba(0,0,0,0.8)' : 'transparent',
+            textShadowOffset: Platform.isTV ? { width: 1, height: 1 } : { width: 0, height: 0 },
+            textShadowRadius: Platform.isTV ? 2 : 0,
+          }}>{section.title}</Text>
           {isProviderLoading && (
-            <View style={styles.sectionLoadingIndicator}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={[styles.sectionLoadingText, { color: colors.primary }]}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: Platform.isTV ? 'rgba(0,0,0,0.8)' : 'transparent',
+              paddingHorizontal: Platform.isTV ? 12 : 0,
+              paddingVertical: Platform.isTV ? 6 : 0,
+              borderRadius: Platform.isTV ? 8 : 0,
+              borderWidth: Platform.isTV ? 1 : 0,
+              borderColor: Platform.isTV ? colors.primary : 'transparent',
+            }}>
+              <ActivityIndicator size={Platform.isTV ? "large" : "small"} color={colors.primary} />
+              <Text style={{
+                marginLeft: Platform.isTV ? 12 : 8,
+                color: colors.primary,
+                fontSize: Platform.isTV ? 16 : 12,
+                fontWeight: Platform.isTV ? '700' : '500',
+              }}>
                 Loading...
               </Text>
             </View>
@@ -1335,7 +1631,7 @@ export const StreamsScreen = () => {
         </View>
       </View>
     );
-  }, [styles.streamGroupTitle, styles.sectionHeaderContainer, styles.sectionHeaderContent, styles.sectionLoadingIndicator, styles.sectionLoadingText, loadingProviders, colors.primary]);
+  }, [loadingProviders, colors.primary, colors.highEmphasis]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1549,15 +1845,12 @@ export const StreamsScreen = () => {
           <View collapsable={false} style={{ flex: 1 }}>
             {/* Show autoplay loading overlay if waiting for autoplay */}
             {isAutoplayWaiting && !autoplayTriggered && (
-              <Animated.View 
-                entering={FadeIn.duration(300)}
-                style={styles.autoplayOverlay}
-              >
+              <View style={styles.autoplayOverlay}>
                 <View style={styles.autoplayIndicator}>
                   <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={styles.autoplayText}>Starting best stream...</Text>
                 </View>
-              </Animated.View>
+              </View>
             )}
             
             <SectionList
@@ -1566,20 +1859,48 @@ export const StreamsScreen = () => {
               renderItem={renderItem}
               renderSectionHeader={renderSectionHeader}
               stickySectionHeadersEnabled={false}
-              initialNumToRender={6}
-              maxToRenderPerBatch={3}
-              windowSize={4}
+              initialNumToRender={Platform.isTV ? 6 : 6}
+              maxToRenderPerBatch={Platform.isTV ? 4 : 3}
+              windowSize={Platform.isTV ? 3 : 4}
               removeClippedSubviews={false}
-              contentContainerStyle={styles.streamsContainer}
-              style={styles.streamsContent}
+              getItemLayout={undefined}
+              contentContainerStyle={{
+                paddingHorizontal: Platform.isTV ? 0 : 16,
+                paddingVertical: Platform.isTV ? 0 : 16,
+                paddingBottom: Platform.isTV ? 120 : 16,
+                width: '100%',
+              }}
+              style={{
+                flex: 1,
+                width: '100%',
+                zIndex: 2,
+                backgroundColor: 'transparent',
+                minHeight: Platform.isTV ? 400 : 'auto',
+              }}
               showsVerticalScrollIndicator={false}
               bounces={true}
               overScrollMode="never"
+              ItemSeparatorComponent={() => Platform.isTV ? (
+                <View style={{ height: 12 }} />
+              ) : null}
               ListFooterComponent={
                 (loadingStreams || loadingEpisodeStreams) && hasStremioStreamProviders ? (
-                  <View style={styles.footerLoading}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={styles.footerLoadingText}>Loading more sources...</Text>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: Platform.isTV ? 24 : 16,
+                    backgroundColor: Platform.isTV ? 'rgba(0,0,0,0.8)' : 'transparent',
+                    borderRadius: Platform.isTV ? 12 : 0,
+                    marginTop: Platform.isTV ? 20 : 0,
+                  }}>
+                    <ActivityIndicator size={Platform.isTV ? "large" : "small"} color={colors.primary} />
+                    <Text style={{
+                      color: colors.primary,
+                      fontSize: Platform.isTV ? 18 : 12,
+                      marginLeft: Platform.isTV ? 12 : 8,
+                      fontWeight: Platform.isTV ? '700' : '500',
+                    }}>Loading more sources...</Text>
                   </View>
                 ) : null
               }
@@ -1620,14 +1941,14 @@ const createStyles = (colors: any) => StyleSheet.create({
   streamsMainContent: {
     flex: 1,
     backgroundColor: colors.darkBackground,
-    paddingTop: 20,
+    paddingTop: Platform.isTV ? 0 : 20,
     zIndex: 1,
   },
   streamsMainContentMovie: {
     paddingTop: Platform.OS === 'android' ? 10 : 15,
   },
   filterContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.isTV ? 0 : 16,
     paddingBottom: 12,
   },
   filterScroll: {
@@ -1679,12 +2000,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   streamCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
+    padding: Platform.isTV ? 20 : 16,
     borderRadius: 10,
-    marginBottom: 12,
-    minHeight: 70,
+    marginBottom: Platform.isTV ? 16 : 12,
+    minHeight: Platform.isTV ? 90 : 70,
     backgroundColor: colors.card,
-    borderWidth: 1,
+    borderWidth: Platform.isTV ? 2 : 1,
     borderColor: colors.cardHighlight,
     width: '100%',
     zIndex: 1,
@@ -1720,15 +2041,15 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   streamName: {
-    fontSize: 14,
+    fontSize: Platform.isTV ? 18 : 14,
     fontWeight: '600',
     marginBottom: 2,
-    lineHeight: 20,
+    lineHeight: Platform.isTV ? 24 : 20,
     color: colors.highEmphasis,
   },
   streamAddonName: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: Platform.isTV ? 16 : 13,
+    lineHeight: Platform.isTV ? 22 : 18,
     color: colors.mediumEmphasis,
     marginBottom: 6,
   },
@@ -1770,9 +2091,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginLeft: 8,
   },
   streamAction: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: Platform.isTV ? 48 : 36,
+    height: Platform.isTV ? 48 : 36,
+    borderRadius: Platform.isTV ? 24 : 18,
     backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2057,10 +2378,10 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '600',
   },
   activeScrapersContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.isTV ? 0 : 16,
     paddingVertical: 8,
     backgroundColor: 'transparent',
-    marginHorizontal: 16,
+    marginHorizontal: Platform.isTV ? 0 : 16,
     marginBottom: 4,
   },
   activeScrapersTitle: {

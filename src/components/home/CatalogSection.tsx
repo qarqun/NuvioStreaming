@@ -17,8 +17,9 @@ const { width } = Dimensions.get('window');
 
 // Dynamic poster calculation based on screen width - show 1/4 of next poster
 const calculatePosterLayout = (screenWidth: number) => {
-  const MIN_POSTER_WIDTH = 100; // Reduced minimum for more posters
-  const MAX_POSTER_WIDTH = 130; // Reduced maximum for more posters
+  // TV gets larger posters
+  const MIN_POSTER_WIDTH = Platform.isTV ? 140 : 100;
+  const MAX_POSTER_WIDTH = Platform.isTV ? 180 : 130;
   const LEFT_PADDING = 16; // Left padding
   const SPACING = 8; // Space between posters
   
@@ -26,7 +27,7 @@ const calculatePosterLayout = (screenWidth: number) => {
   const availableWidth = screenWidth - LEFT_PADDING;
   
   // Try different numbers of full posters to find the best fit
-  let bestLayout = { numFullPosters: 3, posterWidth: 120 };
+  let bestLayout = { numFullPosters: 3, posterWidth: Platform.isTV ? 160 : 120 };
   
   for (let n = 3; n <= 6; n++) {
     // Calculate poster width needed for N full posters + 0.25 partial poster
@@ -123,6 +124,16 @@ const CatalogSection = ({ catalog }: CatalogSectionProps) => {
           minIndexForVisible: 0
         }}
         onEndReachedThreshold={1}
+        // TV-specific focus navigation properties
+        {...(Platform.isTV && {
+          directionalLockEnabled: true,
+          horizontal: true,
+          scrollEnabled: true,
+          focusable: false,
+          tvParallaxProperties: {
+            enabled: false,
+          },
+        })}
       />
     </Animated.View>
   );
@@ -131,6 +142,8 @@ const CatalogSection = ({ catalog }: CatalogSectionProps) => {
 const styles = StyleSheet.create({
   catalogContainer: {
     marginBottom: 28,
+    overflow: 'visible',
+    paddingVertical: Platform.isTV ? 8 : 0,
   },
   catalogHeader: {
     flexDirection: 'row',
@@ -174,7 +187,9 @@ const styles = StyleSheet.create({
   },
   catalogList: {
     paddingHorizontal: 16,
+    paddingVertical: Platform.isTV ? 12 : 0,
+    overflow: 'visible',
   },
 });
 
-export default React.memo(CatalogSection); 
+export default React.memo(CatalogSection);

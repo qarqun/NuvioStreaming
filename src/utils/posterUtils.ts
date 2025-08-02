@@ -15,10 +15,12 @@ export interface PosterLayout {
   spacing: number;
 }
 
+import { Platform } from 'react-native';
+
 // Default configuration for main home sections
 export const DEFAULT_POSTER_CONFIG: PosterLayoutConfig = {
-  minPosterWidth: 110,
-  maxPosterWidth: 140,
+  minPosterWidth: Platform.isTV ? 140 : 110,
+  maxPosterWidth: Platform.isTV ? 180 : 140,
   horizontalPadding: 50,
   minColumns: 3,
   maxColumns: 6,
@@ -27,8 +29,8 @@ export const DEFAULT_POSTER_CONFIG: PosterLayoutConfig = {
 
 // Configuration for More Like This section (smaller posters, more items)
 export const MORE_LIKE_THIS_CONFIG: PosterLayoutConfig = {
-  minPosterWidth: 100,
-  maxPosterWidth: 130,
+  minPosterWidth: Platform.isTV ? 140 : 100,
+  maxPosterWidth: Platform.isTV ? 170 : 130,
   horizontalPadding: 48,
   minColumns: 3,
   maxColumns: 7,
@@ -37,8 +39,8 @@ export const MORE_LIKE_THIS_CONFIG: PosterLayoutConfig = {
 
 // Configuration for Continue Watching section (larger posters, fewer items)
 export const CONTINUE_WATCHING_CONFIG: PosterLayoutConfig = {
-  minPosterWidth: 120,
-  maxPosterWidth: 160,
+  minPosterWidth: Platform.isTV ? 160 : 120,
+  maxPosterWidth: Platform.isTV ? 200 : 160,
   horizontalPadding: 40,
   minColumns: 2,
   maxColumns: 5,
@@ -79,4 +81,4 @@ export const calculatePosterLayout = (
 export const getCurrentPosterLayout = (config?: PosterLayoutConfig): PosterLayout => {
   const { width } = Dimensions.get('window');
   return calculatePosterLayout(width, config);
-}; 
+};

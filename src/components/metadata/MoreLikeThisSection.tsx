@@ -8,12 +8,13 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, StackActions } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-import { StreamingContent } from '../../types/metadata';
+import { StreamingContent } from '../../services/catalogService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { TMDBService } from '../../services/tmdbService';
 import { catalogService } from '../../services/catalogService';
@@ -22,8 +23,9 @@ const { width } = Dimensions.get('window');
 
 // Dynamic poster calculation based on screen width for More Like This section
 const calculatePosterLayout = (screenWidth: number) => {
-  const MIN_POSTER_WIDTH = 100; // Slightly smaller for more items in this section
-  const MAX_POSTER_WIDTH = 130; // Maximum poster width
+  // TV gets larger posters
+  const MIN_POSTER_WIDTH = Platform.isTV ? 140 : 100;
+  const MAX_POSTER_WIDTH = Platform.isTV ? 170 : 130;
   const HORIZONTAL_PADDING = 48; // Total horizontal padding/margins
   
   // Calculate how many posters can fit (aim for slightly more items than main sections)
@@ -169,4 +171,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-}); 
+});

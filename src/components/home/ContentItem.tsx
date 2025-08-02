@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, StyleSheet, Dimensions, Platform, Text } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, TouchableOpacity, ActivityIndicator, StyleSheet, Dimensions, Platform, Text, Animated } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -15,8 +15,9 @@ const { width } = Dimensions.get('window');
 
 // Dynamic poster calculation based on screen width - show 1/4 of next poster
 const calculatePosterLayout = (screenWidth: number) => {
-  const MIN_POSTER_WIDTH = 100; // Reduced minimum for more posters
-  const MAX_POSTER_WIDTH = 130; // Reduced maximum for more posters
+  // TV gets larger posters
+  const MIN_POSTER_WIDTH = Platform.isTV ? 140 : 100;
+  const MAX_POSTER_WIDTH = Platform.isTV ? 180 : 130;
   const LEFT_PADDING = 16; // Left padding
   const SPACING = 8; // Space between posters
   
@@ -24,7 +25,7 @@ const calculatePosterLayout = (screenWidth: number) => {
   const availableWidth = screenWidth - LEFT_PADDING;
   
   // Try different numbers of full posters to find the best fit
-  let bestLayout = { numFullPosters: 3, posterWidth: 120 };
+  let bestLayout = { numFullPosters: 3, posterWidth: Platform.isTV ? 160 : 120 };
   
   for (let n = 3; n <= 6; n++) {
     // Calculate poster width needed for N full posters + 0.25 partial poster
@@ -53,7 +54,11 @@ const POSTER_WIDTH = posterLayout.posterWidth;
 const ContentItem = React.memo(({ item, onPress }: ContentItemProps) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const { currentTheme } = useTheme();
+  
+  // Animation values for TV focus effects
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handleLongPress = useCallback(() => {
     setMenuVisible(true);
@@ -86,39 +91,75 @@ const ContentItem = React.memo(({ item, onPress }: ContentItemProps) => {
     setMenuVisible(false);
   }, []);
 
+  // TV Focus handlers
+  const handleFocus = useCallback(() => {
+    if (Platform.isTV) {
+      setIsFocused(true);
+      Animated.spring(scaleAnim, {
+        toValue: 1.15,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 6,
+      }).start();
+    }
+  }, [scaleAnim]);
+
+  const handleBlur = useCallback(() => {
+    if (Platform.isTV) {
+      setIsFocused(false);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 6,
+      }).start();
+    }
+  }, [scaleAnim]);
+
+  // Dynamic styles for focus effects
+  const animatedContainerStyle = {
+    transform: [{ scale: scaleAnim }],
+    zIndex: isFocused && Platform.isTV ? 10 : 1,
+  };
+
   return (
     <>
       <View style={styles.itemContainer}>
-        <TouchableOpacity
-          style={styles.contentItem}
-          activeOpacity={0.7}
-          onPress={handlePress}
-          onLongPress={handleLongPress}
-          delayLongPress={300}
-        >
-          <View style={styles.contentItemContainer}>
-            <ExpoImage
-              source={{ uri: item.poster || 'https://via.placeholder.com/300x450' }}
-              style={styles.poster}
-              contentFit="cover"
-              cachePolicy="memory"
-              transition={200}
-              placeholder={{ uri: 'https://via.placeholder.com/300x450' }}
-              placeholderContentFit="cover"
-              recyclingKey={item.id}
-            />
-            {isWatched && (
-              <View style={styles.watchedIndicator}>
-                <MaterialIcons name="check-circle" size={22} color={currentTheme.colors.success} />
+        <Animated.View style={animatedContainerStyle}>
+          <TouchableOpacity
+            style={styles.contentItem}
+            activeOpacity={0.7}
+            onPress={handlePress}
+            onLongPress={handleLongPress}
+            delayLongPress={300}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            hasTVPreferredFocus={false}
+          >
+              <View style={styles.contentItemContainer}>
+                <ExpoImage
+                  source={{ uri: item.poster || 'https://via.placeholder.com/300x450' }}
+                  style={styles.poster}
+                  contentFit="cover"
+                  cachePolicy="memory"
+                  transition={200}
+                  placeholder={{ uri: 'https://via.placeholder.com/300x450' }}
+                  placeholderContentFit="cover"
+                  recyclingKey={item.id}
+                />
+                {isWatched && (
+                  <View style={styles.watchedIndicator}>
+                    <MaterialIcons name="check-circle" size={22} color={currentTheme.colors.success} />
+                  </View>
+                )}
+                {item.inLibrary && (
+                  <View style={styles.libraryBadge}>
+                    <MaterialIcons name="bookmark" size={16} color={currentTheme.colors.white} />
+                  </View>
+                )}
               </View>
-            )}
-            {item.inLibrary && (
-              <View style={styles.libraryBadge}>
-                <MaterialIcons name="bookmark" size={16} color={currentTheme.colors.white} />
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
+           </TouchableOpacity>
+         </Animated.View>
         <Text style={[styles.title, { color: currentTheme.colors.text }]} numberOfLines={2}>
           {item.name}
         </Text>
@@ -199,4 +240,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default ContentItem; 
+export default ContentItem;

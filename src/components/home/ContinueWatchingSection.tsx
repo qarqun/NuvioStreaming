@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   wideList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingBottom: 8,
     paddingTop: 4,
     paddingVertical: Platform.isTV ? 12 : 4,

@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     marginBottom: 16,
   },
   titleContainer: {
@@ -252,8 +252,8 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   listContent: {
-    paddingLeft: 16,
-    paddingRight: 16,
+    paddingLeft: 24,
+    paddingRight: 24,
     paddingBottom: 8,
   },
   loadingContainer: {

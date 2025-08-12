@@ -97,7 +97,7 @@ const ContentItem = React.memo(({ item, onPress, onFocusItem }: ContentItemProps
     if (Platform.isTV) {
       setIsFocused(true);
       Animated.spring(scaleAnim, {
-        toValue: 1.15,
+        toValue: 1.10,
         useNativeDriver: true,
         tension: 80,
         friction: 6,
@@ -124,6 +124,8 @@ const ContentItem = React.memo(({ item, onPress, onFocusItem }: ContentItemProps
   const animatedContainerStyle = {
     transform: [{ scale: scaleAnim }],
     zIndex: isFocused && Platform.isTV ? 10 : 1,
+    marginHorizontal: isFocused && Platform.isTV ? 8 : 0,
+    elevation: isFocused && Platform.isTV ? 20 : 6,
   };
 
   return (

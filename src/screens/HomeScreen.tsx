@@ -721,7 +721,7 @@ const HomeScreen = () => {
           data={listData}
           renderItem={renderListItem}
           keyExtractor={item => item.key}
-          contentContainerStyle={StyleSheet.flatten([styles.scrollContent, { paddingTop: 0 }])}
+          contentContainerStyle={StyleSheet.flatten([styles.scrollContent, { paddingTop: 0, paddingHorizontal: 24 }])}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={ListFooterComponent}
           estimatedItemSize={280}

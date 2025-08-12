@@ -101,7 +101,7 @@ const CatalogSection = ({ catalog, onPosterPress, onPosterFocus }: CatalogSectio
         keyExtractor={(item) => `${item.id}-${item.type}`}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.catalogList, { paddingRight: 16 - posterLayout.partialPosterWidth }]}
+        contentContainerStyle={StyleSheet.flatten([styles.catalogList, { paddingRight: 16 - posterLayout.partialPosterWidth }])}
         snapToInterval={POSTER_WIDTH + 8}
         decelerationRate="fast"
         snapToAlignment="start"
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     marginBottom: 16,
   },
   titleContainer: {
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   catalogList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingVertical: Platform.isTV ? 12 : 0,
     overflow: 'visible',
   },

@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -112,11 +113,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     marginBottom: 12,
   },
   metaText: {
-    fontSize: 15,
+    fontSize: Platform.isTV ? 30 : 15,
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
@@ -127,18 +128,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imdbLogo: {
-    width: 35,
-    height: 18,
-    marginRight: 4,
+    width: Platform.isTV ? 44 : 35,
+    height: Platform.isTV ? 22 : 18,
+    marginRight: Platform.isTV ? 6 : 4,
   },
   ratingText: {
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: Platform.isTV ? 18 : 15,
     letterSpacing: 0.3,
   },
   creatorContainer: {
     marginBottom: 2,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
   creatorSection: {
     flexDirection: 'row',
@@ -147,23 +148,23 @@ const styles = StyleSheet.create({
     height: 20
   },
   creatorLabel: {
-    fontSize: 14,
+    fontSize: Platform.isTV ? 16 : 14,
     fontWeight: '600',
     marginRight: 8,
     lineHeight: 20
   },
   creatorText: {
-    fontSize: 14,
+    fontSize: Platform.isTV ? 16 : 14,
     flex: 1,
     lineHeight: 20
   },
   descriptionContainer: {
     marginBottom: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
   description: {
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: Platform.isTV ? 25 : 17,
+    lineHeight: Platform.isTV ? 30 : 26,
   },
   showMoreButton: {
     flexDirection: 'row',
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   showMoreText: {
-    fontSize: 14,
+    fontSize: Platform.isTV ? 17 : 15,
     marginRight: 4,
   },
 });

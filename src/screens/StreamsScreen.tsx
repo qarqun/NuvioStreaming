@@ -180,7 +180,7 @@ const StreamCard = memo(({ stream, onPress, index, isLoading, statusMessage, the
     alignItems: 'stretch' as const,
     backgroundColor: isTV ? '#1a1a1a' : theme.colors.card,
     borderRadius: isTV ? 24 : 12,
-    marginHorizontal: isTV ? 0 : 8,
+    marginHorizontal: isTV ? 12 : 8,
     marginVertical: isTV ? 16 : 8,
     minHeight: isTV ? 160 : 90,
     overflow: 'hidden' as const,
@@ -194,6 +194,7 @@ const StreamCard = memo(({ stream, onPress, index, isLoading, statusMessage, the
     // Force visibility on TV
     opacity: 1,
     zIndex: isTV ? 10 : 1,
+    maxWidth: isTV ? width - (24 * 2) - (12 * 2) : undefined,
   };
   
 
@@ -211,11 +212,11 @@ const StreamCard = memo(({ stream, onPress, index, isLoading, statusMessage, the
         hasTVPreferredFocus={index === 0 && isTV}
         tvParallaxProperties={isTV ? {
           enabled: true,
-          shiftDistanceX: 10.0,
-          shiftDistanceY: 10.0,
-          tiltAngle: 0.25,
-          magnification: 1.08,
-          pressMagnification: 0.92,
+          shiftDistanceX: 6.0,
+          shiftDistanceY: 6.0,
+          tiltAngle: 0.18,
+          magnification: 1.03,
+          pressMagnification: 0.97,
           pressDuration: 0.12,
         } : undefined}
       >
@@ -1865,9 +1866,9 @@ export const StreamsScreen = () => {
               removeClippedSubviews={false}
               getItemLayout={undefined}
               contentContainerStyle={{
-                paddingHorizontal: Platform.isTV ? 0 : 16,
-                paddingVertical: Platform.isTV ? 0 : 16,
-                paddingBottom: Platform.isTV ? 120 : 16,
+                paddingHorizontal: Platform.isTV ? 24 : 16,
+                paddingVertical: 0,
+                paddingBottom: 0,
                 width: '100%',
               }}
               style={{
@@ -1948,7 +1949,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 10 : 15,
   },
   filterContainer: {
-    paddingHorizontal: Platform.isTV ? 0 : 16,
+    paddingHorizontal: Platform.isTV ? 24 : 16,
     paddingBottom: 12,
   },
   filterScroll: {
@@ -1956,11 +1957,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   filterChip: {
     backgroundColor: 'transparent',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
+    paddingHorizontal: Platform.isTV ? 22 : 16,
+    paddingVertical: Platform.isTV ? 12 : 8,
+    borderRadius: Platform.isTV ? 28 : 20,
+    marginRight: Platform.isTV ? 12 : 8,
+    borderWidth: Platform.isTV ? 2 : 1,
     borderColor: colors.border,
   },
   filterChipSelected: {
@@ -1969,11 +1970,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   filterChipText: {
     color: colors.mediumEmphasis,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: Platform.isTV ? 18 : undefined,
   },
   filterChipTextSelected: {
     color: colors.white,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   streamsContent: {
     flex: 1,
@@ -2061,17 +2063,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginRight: 4,
-    marginBottom: 4,
+    paddingHorizontal: Platform.isTV ? 14 : 10,
+    paddingVertical: Platform.isTV ? 6 : 4,
+    borderRadius: Platform.isTV ? 8 : 4,
+    marginRight: Platform.isTV ? 6 : 4,
+    marginBottom: Platform.isTV ? 6 : 4,
     backgroundColor: colors.surfaceVariant,
   },
   chipText: {
     color: colors.highEmphasis,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: Platform.isTV ? 14 : 12,
+    fontWeight: '700',
   },
   progressContainer: {
     height: 20,
@@ -2141,7 +2143,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   streamsHeroContainer: {
     width: '100%',
-    height: 220,
+    height: Platform.isTV ? Math.round(height * 0.45) : 220,
     marginBottom: 0,
     position: 'relative',
     backgroundColor: colors.black,
@@ -2155,7 +2157,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   streamsHeroGradient: {
     flex: 1,
     justifyContent: 'flex-end',
-    padding: 16,
+    padding: Platform.isTV ? 24 : 16,
     paddingBottom: 0,
   },
   streamsHeroContent: {
@@ -2166,27 +2168,27 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   streamsHeroEpisodeNumber: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: Platform.isTV ? 50 : 24,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: Platform.isTV ? 8 : 2,
     textShadowColor: 'rgba(0,0,0,0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   streamsHeroTitle: {
     color: colors.highEmphasis,
-    fontSize: 24,
+    fontSize: Platform.isTV ? 60 : 24,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: Platform.isTV ? 12 : 4,
     textShadowColor: 'rgba(0,0,0,0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   streamsHeroOverview: {
     color: colors.mediumEmphasis,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 2,
+    fontSize: Platform.isTV ? 30 : 14,
+    lineHeight: Platform.isTV ? 28 : 20,
+    marginBottom: Platform.isTV ? 10 : 2,
     textShadowColor: 'rgba(0,0,0,0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
@@ -2194,12 +2196,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   streamsHeroMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: Platform.isTV ? 20 : 12,
     marginTop: 0,
   },
   streamsHeroReleased: {
     color: colors.mediumEmphasis,
-    fontSize: 14,
+    fontSize: Platform.isTV ? 25 : 14,
     textShadowColor: 'rgba(0,0,0,0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
@@ -2208,18 +2210,18 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingHorizontal: Platform.isTV ? 8 : 6,
+    paddingVertical: Platform.isTV ? 4 : 3,
     borderRadius: 4,
     marginTop: 0,
   },
   tmdbLogo: {
-    width: 20,
-    height: 14,
+    width: Platform.isTV ? 28 : 20,
+    height: Platform.isTV ? 18 : 14,
   },
   streamsHeroRatingText: {
     color: colors.accent,
-    fontSize: 13,
+    fontSize: Platform.isTV ? 18 : 13,
     fontWeight: '700',
     marginLeft: 4,
   },
@@ -2270,11 +2272,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   movieTitleContainer: {
     width: '100%',
-    height: 140,
+    height: Platform.isTV ? 200 : 140,
     backgroundColor: colors.darkBackground,
     pointerEvents: 'box-none',
     justifyContent: 'center',
-    paddingTop: Platform.OS === 'android' ? 65 : 35,
+    paddingTop: Platform.isTV ? 40 : (Platform.OS === 'android' ? 65 : 35),
   },
   movieTitleContent: {
     width: '100%',
@@ -2285,11 +2287,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   movieLogo: {
     width: '100%',
     height: '100%',
-    maxWidth: width * 0.85,
+    maxWidth: Platform.isTV ? width * 0.9 : width * 0.85,
   },
   movieTitle: {
     color: colors.highEmphasis,
-    fontSize: 28,
+    fontSize: Platform.isTV ? 36 : 28,
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: -0.5,
@@ -2378,7 +2380,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '600',
   },
   activeScrapersContainer: {
-    paddingHorizontal: Platform.isTV ? 0 : 16,
+    paddingHorizontal: Platform.isTV ? 24 : 16,
     paddingVertical: 8,
     backgroundColor: 'transparent',
     marginHorizontal: Platform.isTV ? 0 : 16,
@@ -2386,27 +2388,27 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   activeScrapersTitle: {
     color: colors.mediumEmphasis,
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: Platform.isTV ? 14 : 12,
+    fontWeight: '600',
     marginBottom: 6,
     opacity: 0.8,
   },
   activeScrapersRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: Platform.isTV ? 6 : 4,
   },
   activeScraperChip: {
     backgroundColor: colors.elevation2,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: Platform.isTV ? 12 : 8,
+    paddingVertical: Platform.isTV ? 6 : 3,
+    borderRadius: Platform.isTV ? 10 : 6,
     borderWidth: 0,
   },
   activeScraperText: {
     color: colors.mediumEmphasis,
-    fontSize: 11,
-    fontWeight: '400',
+    fontSize: Platform.isTV ? 13 : 11,
+    fontWeight: '500',
   },
 });
 

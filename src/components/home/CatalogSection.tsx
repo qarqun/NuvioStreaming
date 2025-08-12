@@ -93,19 +93,6 @@ const CatalogSection = ({ catalog, onPosterPress, onPosterFocus }: CatalogSectio
           <Text style={[styles.catalogTitle, { color: currentTheme.colors.text }]} numberOfLines={1}>{catalog.name}</Text>
           <View style={[styles.titleUnderline, { backgroundColor: currentTheme.colors.primary }]} />
         </View>
-        <TouchableOpacity
-          onPress={() => 
-            navigation.navigate('Catalog', {
-              id: catalog.id,
-              type: catalog.type,
-              addonId: catalog.addon
-            })
-          }
-          style={styles.viewAllButton}
-        >
-          <Text style={[styles.viewAllText, { color: currentTheme.colors.textMuted }]}>View All</Text>
-          <MaterialIcons name="chevron-right" size={20} color={currentTheme.colors.textMuted} />
-        </TouchableOpacity>
       </View>
       
       <FlashList

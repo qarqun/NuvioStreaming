@@ -363,17 +363,6 @@ const MetadataScreen: React.FC = () => {
       
       {metadata && (
         <>
-          {/* Floating Header - Optimized */}
-          <FloatingHeader 
-            metadata={metadata}
-            logoLoadError={assetData.logoLoadError}
-            handleBack={handleBack}
-            handleToggleLibrary={handleToggleLibrary}
-            inLibrary={inLibrary}
-            safeAreaTop={safeAreaTop}
-            setLogoLoadError={assetData.setLogoLoadError}
-          />
-
           <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}

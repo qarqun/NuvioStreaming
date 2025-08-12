@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, useWindowDimensions, useColorScheme, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, useWindowDimensions, useColorScheme, FlatList, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -231,7 +231,10 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.seasonSelectorContainer}
-          contentContainerStyle={styles.seasonSelectorContent}
+          contentContainerStyle={[
+            styles.seasonSelectorContent,
+            Platform.isTV && { paddingVertical: 10, paddingHorizontal: 24 }
+          ]}
           initialNumToRender={5}
           maxToRenderPerBatch={5}
           windowSize={3}
@@ -250,18 +253,31 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
                 key={season}
                 style={[
                   styles.seasonButton,
+                  Platform.isTV && { width: 140, marginRight: 24 },
                   selectedSeason === season && [styles.selectedSeasonButton, { borderColor: currentTheme.colors.primary }]
                 ]}
                 onPress={() => onSeasonChange(season)}
+                hasTVPreferredFocus={Platform.isTV && selectedSeason === season}
+                activeOpacity={0.85}
+                tvParallaxProperties={Platform.isTV ? {
+                  enabled: true,
+                  shiftDistanceX: 2.0,
+                  shiftDistanceY: 2.0,
+                  tiltAngle: 0.05,
+                  magnification: 1.08,
+                } : undefined}
               >
-                <View style={styles.seasonPosterContainer}>
+                <View style={[
+                  styles.seasonPosterContainer,
+                  Platform.isTV && { width: 140, height: 210, borderRadius: 12 }
+                ]}>
                   <Image
                     source={{ uri: seasonPoster }}
                     style={styles.seasonPoster}
                     contentFit="cover"
                   />
                   {selectedSeason === season && (
-                    <View style={[styles.selectedSeasonIndicator, { backgroundColor: currentTheme.colors.primary }]} />
+                    <View style={[styles.selectedSeasonIndicator, { backgroundColor: currentTheme.colors.primary, height: 6 }]} />
                   )}
                   {/* Show episode count badge, including when there are no episodes */}
                   <View style={[styles.episodeCountBadge, { backgroundColor: currentTheme.colors.elevation2 }]}>
@@ -274,6 +290,7 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
                   style={[
                     styles.seasonButtonText,
                     { color: currentTheme.colors.mediumEmphasis },
+                    Platform.isTV && { fontSize: 18, marginTop: 6 },
                     selectedSeason === season && [styles.selectedSeasonButtonText, { color: currentTheme.colors.primary }]
                   ]}
                 >
@@ -340,14 +357,24 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
         style={[
           styles.episodeCardVertical, 
           isTablet && styles.episodeCardVerticalTablet, 
-          { backgroundColor: currentTheme.colors.elevation2 }
+          { backgroundColor: currentTheme.colors.elevation2 },
+          Platform.isTV && { height: 150 }
         ]}
         onPress={() => onSelectEpisode(episode)}
         activeOpacity={0.7}
+        hasTVPreferredFocus={Platform.isTV && episode === episodes[0]}
+        tvParallaxProperties={Platform.isTV ? {
+          enabled: true,
+          shiftDistanceX: 2.0,
+          shiftDistanceY: 2.0,
+          tiltAngle: 0.05,
+          magnification: 1.05,
+        } : undefined}
       >
         <View style={[
           styles.episodeImageContainer,
-          isTablet && styles.episodeImageContainerTablet
+          isTablet && styles.episodeImageContainerTablet,
+          Platform.isTV && { width: 150, height: 150 }
         ]}>
           <Image
             source={{ uri: episodeImage }}
@@ -488,6 +515,14 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
         ]}
         onPress={() => onSelectEpisode(episode)}
         activeOpacity={0.85}
+        hasTVPreferredFocus={Platform.isTV && episode === episodes[0]}
+        tvParallaxProperties={Platform.isTV ? {
+          enabled: true,
+          shiftDistanceX: 2.0,
+          shiftDistanceY: 2.0,
+          tiltAngle: 0.05,
+          magnification: 1.06,
+        } : undefined}
       >
         {/* Gradient Border Container */}
         <View style={{
@@ -644,7 +679,8 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
                   entering={FadeIn.duration(300).delay(100 + index * 30)}
                   style={[
                     styles.episodeCardWrapperHorizontal,
-                    isTablet && styles.episodeCardWrapperHorizontalTablet
+                    isTablet && styles.episodeCardWrapperHorizontalTablet,
+                    Platform.isTV && { width: width * 0.3, marginRight: 24 }
                   ]}
                 >
                   {renderHorizontalEpisodeCard(episode)}
@@ -653,9 +689,12 @@ export const SeriesContent: React.FC<SeriesContentProps> = ({
               keyExtractor={episode => episode.id.toString()}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.episodeListContentHorizontal}
+              contentContainerStyle={[
+                styles.episodeListContentHorizontal,
+                Platform.isTV && { paddingLeft: 24, paddingRight: 24 }
+              ]}
               decelerationRate="fast"
-              snapToInterval={isTablet ? width * 0.4 + 16 : width * 0.85 + 16}
+              snapToInterval={Platform.isTV ? width * 0.3 + 24 : (isTablet ? width * 0.4 + 16 : width * 0.85 + 16)}
               snapToAlignment="start"
               initialNumToRender={3}
               maxToRenderPerBatch={3}
@@ -721,7 +760,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     marginBottom: 16,
     paddingHorizontal: 16,
@@ -756,22 +795,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    height: 120,
+    height: 130,
   },
   episodeCardVerticalTablet: {
     width: '47%',
     flexDirection: 'row',
-    height: 140,
+    height: 160,
     marginBottom: 0,
   },
   episodeImageContainer: {
     position: 'relative',
-    width: 120,
-    height: 120,
+    width: 130,
+    height: 130,
   },
   episodeImageContainerTablet: {
-    width: 140,
-    height: 140,
+    width: 160,
+    height: 160,
   },
   episodeImage: {
     width: '100%',
@@ -811,14 +850,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   episodeTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
     marginBottom: 2,
   },
   episodeTitleTablet: {
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: 18,
+    marginBottom: 6,
   },
   episodeMetadata: {
     flexDirection: 'row',
@@ -843,7 +882,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     color: '#01b4e4',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     marginLeft: 4,
   },
@@ -856,21 +895,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   runtimeText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
   },
   airDateText: {
-    fontSize: 12,
+    fontSize: 13,
     opacity: 0.8,
   },
   episodeOverview: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  episodeOverviewTablet: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  episodeOverviewTablet: {
+    fontSize: 15,
+    lineHeight: 22,
   },
   progressBarContainer: {
     position: 'absolute',
@@ -919,13 +958,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
-    height: 200,
+    height: Platform.isTV ? 200 : 220,
     position: 'relative',
     width: '100%',
     backgroundColor: 'transparent',
   },
   episodeCardHorizontalTablet: {
-    height: 180,
+    height: 250,
   },
   episodeBackgroundImage: {
     width: '100%',
@@ -963,7 +1002,7 @@ const styles = StyleSheet.create({
   },
   episodeTitleHorizontal: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: -0.3,
     marginBottom: 4,
@@ -971,8 +1010,8 @@ const styles = StyleSheet.create({
   },
   episodeDescriptionHorizontal: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: Platform.isTV ? 14 : 13,
+    lineHeight: 18,
     marginBottom: 8,
     opacity: 0.9,
   },
@@ -991,7 +1030,7 @@ const styles = StyleSheet.create({
   },
   runtimeTextHorizontal: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
   },
   ratingContainerHorizontal: {
@@ -1005,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   ratingTextHorizontal: {
     color: '#FFD700',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   progressBarContainerHorizontal: {

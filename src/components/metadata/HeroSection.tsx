@@ -73,29 +73,53 @@ const ActionButtons = React.memo(({
   const { currentTheme } = useTheme();
   
   return (
-    <View style={styles.actionButtons}>
+    <View style={[
+      styles.actionButtons,
+      Platform.isTV && { paddingHorizontal: 0, gap: 16 }
+    ]}>
       <TouchableOpacity 
         style={[
           styles.actionButton, 
-          isWatched ? styles.watchedPlayButton : styles.playButton
+          isWatched ? styles.watchedPlayButton : styles.playButton,
+          Platform.isTV && { paddingVertical: 16, paddingHorizontal: 26, minWidth: 240 }
         ]} 
         onPress={handleShowStreams}
+        hasTVPreferredFocus
+        tvParallaxProperties={Platform.isTV ? {
+          enabled: true,
+          shiftDistanceX: 3.0,
+          shiftDistanceY: 3.0,
+          tiltAngle: 0.06,
+          magnification: 1.08,
+        } : undefined}
       >
         <MaterialIcons 
           name="play-arrow" 
-          size={20} 
+          size={Platform.isTV ? 26 : 20} 
           color={isWatched ? "#fff" : "#000"} 
         />
         <Text style={[
-          isWatched ? styles.watchedPlayButtonText : styles.playButtonText
+          isWatched ? styles.watchedPlayButtonText : styles.playButtonText,
+          Platform.isTV && { fontSize: 18 }
         ]}>
           {playButtonText}
         </Text>
       </TouchableOpacity>
       
       <TouchableOpacity 
-        style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+        style={[
+          styles.iconButton, 
+          { backgroundColor: 'rgba(255,255,255,0.1)' },
+          Platform.isTV && { width: 60, height: 60, borderRadius: 30 }
+        ]}
         onPress={toggleLibrary}
+        tvParallaxProperties={Platform.isTV ? {
+          enabled: true,
+          shiftDistanceX: 2.0,
+          shiftDistanceY: 2.0,
+          tiltAngle: 0.05,
+          magnification: 1.06,
+        } : undefined}
       >
         {Platform.OS === 'ios' ? (
           <ExpoBlurView intensity={50} tint="dark" style={styles.blurBackgroundRound} />
@@ -104,7 +128,7 @@ const ActionButtons = React.memo(({
         )}
         <MaterialIcons 
           name={inLibrary ? 'bookmark' : 'bookmark-border'} 
-          size={22} 
+          size={Platform.isTV ? 24 : 22} 
           color={currentTheme.colors.highEmphasis}
         />
       </TouchableOpacity>
@@ -238,18 +262,22 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   };
   
   return (
-    <View style={[styles.heroSection, { height: height * 0.5 }]}>
+    <View style={[styles.heroSection, { height: height * 0.65 }]}>
       {/* Background Image */}
-      {bannerImage && !imageLoadError && (
-        <Image
-          source={{ uri: bannerImage }}
-          style={styles.absoluteFill}
-          contentFit="cover"
-          transition={300}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-        />
-      )}
+      {(() => {
+        const fallback = (metadata && (metadata.banner || metadata.poster)) || null;
+        const uriToUse = !imageLoadError && bannerImage ? bannerImage : fallback;
+        return uriToUse ? (
+          <Image
+            source={{ uri: uriToUse }}
+            style={styles.absoluteFill}
+            contentFit="cover"
+            transition={300}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        ) : null;
+      })()}
       
       {/* Gradient Overlay */}
       <LinearGradient
@@ -345,9 +373,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   heroContent: {
-    padding: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    padding: Platform.isTV ? 24 : 16,
+    paddingTop: Platform.isTV ? 12 : 8,
+    paddingBottom: Platform.isTV ? 12 : 8,
   },
   logoContainer: {
     alignItems: 'center',
@@ -361,12 +389,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   titleLogo: {
-    width: width * 0.75,
-    height: 90,
+    width: Platform.isTV ? width * 0.5 : width * 0.75,
+    height: Platform.isTV ? 120 : 90,
     alignSelf: 'center',
   },
   heroTitle: {
-    fontSize: 26,
+    fontSize: Platform.isTV ? 44 : 26,
     fontWeight: '900',
     marginBottom: 8,
     textShadowColor: 'rgba(0,0,0,0.8)',
@@ -385,12 +413,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   genreText: {
-    fontSize: 12,
+    fontSize: Platform.isTV ? 16 : 12,
     fontWeight: '500',
     opacity: 0.9,
   },
   genreDot: {
-    fontSize: 12,
+    fontSize: Platform.isTV ? 16 : 12,
     fontWeight: '500',
     opacity: 0.6,
     marginHorizontal: 2,
@@ -410,7 +438,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 16,
     borderRadius: 26,
-    flex: 1,
+    flex: Platform.isTV ? 0 : 1,
   },
   playButton: {
     backgroundColor: '#fff',
@@ -657,12 +685,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   watchProgressMainText: {
-    fontSize: 11,
+    fontSize: Platform.isTV ? 14 : 11,
     fontWeight: '600',
     textAlign: 'center',
   },
   watchProgressSubText: {
-    fontSize: 9,
+    fontSize: Platform.isTV ? 12 : 9,
     textAlign: 'center',
     opacity: 0.8,
     marginBottom: 1,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, Animated, Platform } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useMDBListRatings } from '../../hooks/useMDBListRatings';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -190,8 +190,8 @@ export const RatingsSection: React.FC<RatingsSectionProps> = ({ imdbId, type }) 
               ) : (
                 <View style={styles.compactSvgContainer}>
                   {React.createElement(config.icon as any, {
-                    width: 16,
-                    height: 16,
+                    width: Platform.isTV ? 22 : 16,
+                    height: Platform.isTV ? 22 : 16,
                   })}
                 </View>
               )}
@@ -209,8 +209,8 @@ export const RatingsSection: React.FC<RatingsSectionProps> = ({ imdbId, type }) 
 const styles = StyleSheet.create({
   container: {
     marginTop: 2,
-    marginBottom: 8,
-    paddingHorizontal: 16,
+    marginBottom: 10,
+    paddingHorizontal: Platform.isTV ? 24 : 16,
   },
   loadingContainer: {
     height: 40,
@@ -225,18 +225,18 @@ const styles = StyleSheet.create({
   compactRatingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: Platform.isTV ? 16 : 12,
   },
   compactRatingIcon: {
-    width: 16,
-    height: 16,
-    marginRight: 4,
+    width: Platform.isTV ? 22 : 16,
+    height: Platform.isTV ? 22 : 16,
+    marginRight: Platform.isTV ? 6 : 4,
   },
   compactSvgContainer: {
-    marginRight: 4,
+    marginRight: Platform.isTV ? 6 : 4,
   },
   compactRatingValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: Platform.isTV ? 18 : 14,
+    fontWeight: '700',
   },
 }); 

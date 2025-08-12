@@ -9,6 +9,7 @@ import { DropUpMenu } from './DropUpMenu';
 interface ContentItemProps {
   item: StreamingContent;
   onPress: (id: string, type: string) => void;
+  onFocusItem?: (item: StreamingContent) => void;
 }
 
 const { width } = Dimensions.get('window');
@@ -51,7 +52,7 @@ const calculatePosterLayout = (screenWidth: number) => {
 const posterLayout = calculatePosterLayout(width);
 const POSTER_WIDTH = posterLayout.posterWidth;
 
-const ContentItem = React.memo(({ item, onPress }: ContentItemProps) => {
+const ContentItem = React.memo(({ item, onPress, onFocusItem }: ContentItemProps) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -101,6 +102,9 @@ const ContentItem = React.memo(({ item, onPress }: ContentItemProps) => {
         tension: 80,
         friction: 6,
       }).start();
+    }
+    if (onFocusItem) {
+      onFocusItem(item);
     }
   }, [scaleAnim]);
 

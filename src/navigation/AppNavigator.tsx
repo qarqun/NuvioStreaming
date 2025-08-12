@@ -10,7 +10,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { colors } from '../styles/colors';
-import { NuvioHeader } from '../components/NuvioHeader';
 import { Stream } from '../types/streams';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
@@ -372,11 +371,11 @@ const TabScreenWrapper: React.FC<{children: React.ReactNode}> = ({ children }) =
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Reserve consistent space for the header area on all screens */}
+      {/* Optional reserved space behind content if needed */}
       <View style={{ 
-        height: Platform.OS === 'android' ? 80 : 60, 
+        height: Platform.OS === 'android' ? 56 : 56, 
         width: '100%', 
-        backgroundColor: colors.darkBackground,
+        backgroundColor: 'transparent',
         position: 'absolute',
         top: 0,
         left: 0,
@@ -403,136 +402,168 @@ const MainTabs = () => {
   
   const renderTabBar = (props: BottomTabBarProps) => {
     return (
-      <View style={{ 
-        position: 'absolute', 
-        bottom: 0, 
-        left: 0, 
-        right: 0,
-        height: 85,
-        backgroundColor: 'transparent',
-        overflow: 'hidden',
-      }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 8,
+          left: 0,
+          right: 0,
+          height: 40,
+          backgroundColor: 'transparent',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          overflow: 'visible',
+          zIndex: 100,
+        }}
+      >
         {Platform.OS === 'ios' ? (
           <BlurView
             tint="dark"
             intensity={75}
             style={{
-              position: 'absolute',
-              height: '100%',
-              width: '100%',
-              borderTopColor: currentTheme.colors.border,
-              borderTopWidth: 0.5,
-              shadowColor: currentTheme.colors.black,
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 3,
+              borderRadius: 20,
+              overflow: 'hidden',
+              paddingVertical: 6,
+              paddingHorizontal: 8,
+              minWidth: 200,
+              maxWidth: '90%',
             }}
-          />
-        ) : (
-          <LinearGradient
-            colors={[
-              'rgba(0, 0, 0, 0)',
-              'rgba(0, 0, 0, 0.65)',
-              'rgba(0, 0, 0, 0.85)',
-              'rgba(0, 0, 0, 0.98)',
-            ]}
-            locations={[0, 0.2, 0.4, 0.8]}
-            style={{
-              position: 'absolute',
-              height: '100%',
-              width: '100%',
-            }}
-          />
-        )}
-        <View
-          style={{
-            height: '100%',
-            paddingBottom: 20,
-            paddingTop: 12,
-            backgroundColor: 'transparent',
-          }}
-        >
-          <View style={{ flexDirection: 'row', paddingTop: 4 }}>
-            {props.state.routes.map((route, index) => {
-              const { options } = props.descriptors[route.key];
-              const label =
-                options.tabBarLabel !== undefined
-                  ? options.tabBarLabel
-                  : options.title !== undefined
-                  ? options.title
-                  : route.name;
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {props.state.routes.map((route, index) => {
+                const { options } = props.descriptors[route.key];
+                const label =
+                  options.tabBarLabel !== undefined
+                    ? options.tabBarLabel
+                    : options.title !== undefined
+                    ? options.title
+                    : route.name;
 
-              const isFocused = props.state.index === index;
+                const isFocused = props.state.index === index;
 
-              const onPress = () => {
-                const event = props.navigation.emit({
-                  type: 'tabPress',
-                  target: route.key,
-                  canPreventDefault: true,
-                });
+                const onPress = () => {
+                  const event = props.navigation.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
 
-                if (!isFocused && !event.defaultPrevented) {
-                  props.navigation.navigate(route.name);
-                }
-              };
+                  if (!isFocused && !event.defaultPrevented) {
+                    props.navigation.navigate(route.name);
+                  }
+                };
 
-              let iconName: IconNameType = 'home';
-              switch (route.name) {
-                case 'Home':
-                  iconName = 'home';
-                  break;
-                case 'Library':
-                  iconName = 'play-box-multiple';
-                  break;
-                case 'Search':
-                  iconName = 'feature-search';
-                  break;
-                case 'Settings':
-                  iconName = 'cog';
-                  break;
-              }
-
-              return (
-                <TouchableOpacity
-                  key={route.key}
-                  activeOpacity={0.7}
-                  onPress={onPress}
-                  hasTVPreferredFocus={index === 0 && Platform.isTV}
-                  tvParallaxProperties={Platform.isTV ? {
-                    enabled: true,
-                    shiftDistanceX: 2.0,
-                    shiftDistanceY: 2.0,
-                    tiltAngle: 0.05,
-                    magnification: 1.1,
-                  } : undefined}
-                  style={{
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    backgroundColor: 'transparent',
-                  }}
-                >
-                  <TabIcon 
-                    focused={isFocused} 
-                    color={isFocused ? currentTheme.colors.primary : currentTheme.colors.white} 
-                    iconName={iconName}
-                  />
-                  <Text
+                return (
+                  <TouchableOpacity
+                    key={route.key}
+                    activeOpacity={0.8}
+                    onPress={onPress}
+                    hasTVPreferredFocus={index === 0 && Platform.isTV}
+                    tvParallaxProperties={Platform.isTV ? {
+                      enabled: true,
+                      shiftDistanceX: 2.0,
+                      shiftDistanceY: 2.0,
+                      tiltAngle: 0.05,
+                      magnification: 1.05,
+                    } : undefined}
                     style={{
-                      fontSize: 12,
-                      fontWeight: '600',
-                      marginTop: 4,
-                      color: isFocused ? currentTheme.colors.primary : currentTheme.colors.white,
-                      opacity: isFocused ? 1 : 0.7,
+                      paddingVertical: 4,
+                      paddingHorizontal: 12,
+                      marginHorizontal: 2,
+                      borderRadius: 14,
+                      backgroundColor: 'transparent',
                     }}
                   >
-                    {typeof label === 'string' ? label : ''}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: isFocused ? currentTheme.colors.primary : currentTheme.colors.white,
+                        opacity: isFocused ? 1 : 0.75,
+                      }}
+                    >
+                      {typeof label === 'string' ? label : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </BlurView>
+        ) : (
+          <View
+            style={{
+              borderRadius: 20,
+              overflow: 'hidden',
+              paddingVertical: 6,
+              paddingHorizontal: 8,
+              minWidth: 200,
+              maxWidth: '90%',
+              backgroundColor: 'rgba(0,0,0,0.6)',
+              borderWidth: 0.5,
+              borderColor: currentTheme.colors.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {props.state.routes.map((route, index) => {
+                const { options } = props.descriptors[route.key];
+                const label =
+                  options.tabBarLabel !== undefined
+                    ? options.tabBarLabel
+                    : options.title !== undefined
+                    ? options.title
+                    : route.name;
+
+                const isFocused = props.state.index === index;
+
+                const onPress = () => {
+                  const event = props.navigation.emit({
+                    type: 'tabPress',
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
+
+                  if (!isFocused && !event.defaultPrevented) {
+                    props.navigation.navigate(route.name);
+                  }
+                };
+
+                return (
+                  <TouchableOpacity
+                    key={route.key}
+                    activeOpacity={0.8}
+                    onPress={onPress}
+                    hasTVPreferredFocus={index === 0 && Platform.isTV}
+                    tvParallaxProperties={Platform.isTV ? {
+                      enabled: true,
+                      shiftDistanceX: 2.0,
+                      shiftDistanceY: 2.0,
+                      tiltAngle: 0.05,
+                      magnification: 1.05,
+                    } : undefined}
+                    style={{
+                      paddingVertical: 4,
+                      paddingHorizontal: 12,
+                      marginHorizontal: 2,
+                      borderRadius: 14,
+                      backgroundColor: 'transparent',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: isFocused ? currentTheme.colors.primary : currentTheme.colors.white,
+                        opacity: isFocused ? 1 : 0.8,
+                      }}
+                    >
+                      {typeof label === 'string' ? label : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -578,8 +609,7 @@ const MainTabs = () => {
               ],
             },
           }),
-          header: () => (route.name === 'Home' ? <NuvioHeader /> : null),
-          headerShown: route.name === 'Home',
+          headerShown: false,
           tabBarShowLabel: false,
           tabBarStyle: {
             position: 'absolute',

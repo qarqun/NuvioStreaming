@@ -252,29 +252,7 @@ const FeaturedContent = ({ featuredContent }: FeaturedContentProps) => {
               )}
             </View>
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity
-                style={styles.playButton}
-                onPress={() => navigation.navigate('Metadata', {
-                  id: featuredContent.id,
-                  type: featuredContent.type
-                })}
-                hasTVPreferredFocus={Platform.isTV}
-                tvParallaxProperties={Platform.isTV ? {
-                  enabled: true,
-                  shiftDistanceX: 4.0,
-                  shiftDistanceY: 4.0,
-                  tiltAngle: 0.05,
-                  magnification: 1.1,
-                } : undefined}
-              >
-                <MaterialIcons name="play-arrow" size={Platform.isTV ? 28 : 24} color="#000" />
-                <Text style={styles.playButtonText}>Play</Text>
-              </TouchableOpacity>
-
-
-            </View>
+            {/* Action buttons removed per design */}
 
 
           </View>
@@ -287,7 +265,7 @@ const FeaturedContent = ({ featuredContent }: FeaturedContentProps) => {
 const styles = StyleSheet.create({
   featuredContainer: {
     width: '100%',
-    height: Platform.isTV ? height * 0.5 : height * 0.4,
+    height: Platform.isTV ? height * 0.65 : height * 0.5,
     marginTop: 0,
     marginBottom: Platform.isTV ? 16 : 8,
     position: 'relative',
@@ -471,33 +449,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.isTV ? 18 : 16,
     fontWeight: '600',
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Platform.isTV ? 20 : 16,
-    marginTop: Platform.isTV ? 24 : 16,
-  },
-  playButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: Platform.isTV ? 48 : 32,
-    paddingVertical: Platform.isTV ? 16 : 12,
-    borderRadius: Platform.isTV ? 12 : 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-    minWidth: Platform.isTV ? 200 : 140,
-  },
-  playButtonText: {
-    color: '#000',
-    fontSize: Platform.isTV ? 18 : 16,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
+  // Action buttons removed
 
 });
 

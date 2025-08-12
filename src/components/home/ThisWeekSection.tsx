@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import { Image } from 'expo-image';
@@ -191,7 +191,7 @@ export const ThisWeekSection = React.memo(() => {
         </TouchableOpacity>
       </View>
       
-      <FlatList
+      <FlashList
         data={thisWeekEpisodes}
         keyExtractor={(item) => item.id}
         renderItem={renderEpisodeItem}
@@ -202,6 +202,7 @@ export const ThisWeekSection = React.memo(() => {
         decelerationRate="fast"
         snapToAlignment="start"
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        estimatedItemSize={ITEM_WIDTH + 16}
       />
     </View>
   );

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
@@ -18,6 +17,7 @@ import {
   Pressable,
   Alert
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -241,6 +241,12 @@ const HomeScreen = () => {
     handleSaveToLibrary, 
     refreshFeatured 
   } = useFeaturedContent();
+  const [selectedContent, setSelectedContent] = useState<StreamingContent | null>(null);
+  useEffect(() => {
+    if (!selectedContent && featuredContent) {
+      setSelectedContent(featuredContent);
+    }
+  }, [featuredContent, selectedContent]);
 
     // Progressive catalog loading function
   const loadCatalogsProgressively = useCallback(async () => {
@@ -587,9 +593,7 @@ const HomeScreen = () => {
     }
 
     // Normal flow when addons are present
-    if (showHeroSection) {
-      data.push({ type: 'featured', key: 'featured' });
-    }
+    // Hero section will be rendered locked at the top outside the list
 
     data.push({ type: 'thisWeek', key: 'thisWeek' });
     data.push({ type: 'continueWatching', key: 'continueWatching' });
@@ -604,19 +608,12 @@ const HomeScreen = () => {
     });
 
     return data;
-  }, [hasAddons, showHeroSection, catalogs]);
+  }, [hasAddons, catalogs]);
 
   const renderListItem = useCallback(({ item }: { item: HomeScreenListItem }) => {
     switch (item.type) {
       case 'featured':
-        return (
-          <FeaturedContent
-            key={`featured-${showHeroSection}-${featuredContentSource}`}
-            featuredContent={featuredContent}
-            isSaved={isSaved}
-            handleSaveToLibrary={handleSaveToLibrary}
-          />
-        );
+        return null;
       case 'thisWeek':
         return <Animated.View entering={FadeIn.duration(300).delay(100)}><ThisWeekSection /></Animated.View>;
       case 'continueWatching':
@@ -624,7 +621,11 @@ const HomeScreen = () => {
       case 'catalog':
         return (
           <Animated.View entering={FadeIn.duration(300)}>
-            <CatalogSection catalog={item.catalog} onPosterPress={handlePosterPress} />
+            <CatalogSection 
+              catalog={item.catalog} 
+              onPosterPress={handlePosterPress}
+              onPosterFocus={(content) => setSelectedContent(content)}
+            />
           </Animated.View>
         );
       case 'placeholder':
@@ -691,12 +692,10 @@ const HomeScreen = () => {
     </>
   ), [catalogsLoading, catalogs, loadedCatalogCount, totalCatalogsRef.current, navigation, currentTheme.colors]);
 
-  // Memoize the main content section
-  const [selectedContent, setSelectedContent] = useState<StreamingContent | null>(null);
-
+  // Handle poster press from catalogs to navigate to Metadata
   const handlePosterPress = useCallback((content: StreamingContent) => {
-    setSelectedContent(content);
-  }, []);
+    navigation.navigate('Metadata', { id: content.id, type: content.type });
+  }, [navigation]);
 
   const renderMainContent = useMemo(() => {
     if (isLoading) return null;
@@ -708,31 +707,25 @@ const HomeScreen = () => {
           backgroundColor="transparent"
           translucent
         />
-        <FlatList
+        {/* Locked hero section using selectedContent */}
+        {showHeroSection && (
+          <View>
+            <FeaturedContent
+              featuredContent={selectedContent}
+              isSaved={isSaved}
+              handleSaveToLibrary={handleSaveToLibrary}
+            />
+          </View>
+        )}
+        <FlashList
           data={listData}
           renderItem={renderListItem}
           keyExtractor={item => item.key}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingTop: 0 }
-          ]}
+          contentContainerStyle={StyleSheet.flatten([styles.scrollContent, { paddingTop: 0 }])}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={ListFooterComponent}
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={11}
-          removeClippedSubviews={Platform.OS === 'android'}
+          estimatedItemSize={280}
           onEndReachedThreshold={0.5}
-          updateCellsBatchingPeriod={50}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 10
-          }}
-          getItemLayout={(data, index) => ({
-            length: 280,
-            offset: index * 280,
-            index,
-          })}
         />
       </View>
     );
@@ -741,7 +734,11 @@ const HomeScreen = () => {
     currentTheme.colors,
     listData,
     renderListItem,
-    ListFooterComponent
+    ListFooterComponent,
+    showHeroSection,
+    selectedContent,
+    isSaved,
+    handleSaveToLibrary
   ]);
 
   return isLoading ? renderLoadingScreen : renderMainContent;

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +13,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 interface CatalogSectionProps {
   catalog: CatalogContent;
   onPosterPress?: (content: StreamingContent) => void;
+  onPosterFocus?: (content: StreamingContent) => void;
 }
 
 const { width } = Dimensions.get('window');
@@ -54,7 +56,7 @@ const calculatePosterLayout = (screenWidth: number) => {
 const posterLayout = calculatePosterLayout(width);
 const POSTER_WIDTH = posterLayout.posterWidth;
 
-const CatalogSection = ({ catalog, onPosterPress }: CatalogSectionProps) => {
+const CatalogSection = ({ catalog, onPosterPress, onPosterFocus }: CatalogSectionProps) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { currentTheme } = useTheme();
 
@@ -75,6 +77,7 @@ const CatalogSection = ({ catalog, onPosterPress }: CatalogSectionProps) => {
         <ContentItem 
           item={item} 
           onPress={handleContentPress}
+          onFocusItem={onPosterFocus}
         />
       </Animated.View>
     );
@@ -105,7 +108,7 @@ const CatalogSection = ({ catalog, onPosterPress }: CatalogSectionProps) => {
         </TouchableOpacity>
       </View>
       
-      <FlatList
+      <FlashList
         data={catalog.items}
         renderItem={renderContentItem}
         keyExtractor={(item) => `${item.id}-${item.type}`}
@@ -116,19 +119,7 @@ const CatalogSection = ({ catalog, onPosterPress }: CatalogSectionProps) => {
         decelerationRate="fast"
         snapToAlignment="start"
         ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
-        initialNumToRender={3}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-        removeClippedSubviews={Platform.OS === 'android'}
-        updateCellsBatchingPeriod={50}
-        getItemLayout={(data, index) => ({
-          length: POSTER_WIDTH + 8,
-          offset: (POSTER_WIDTH + 8) * index,
-          index,
-        })}
-        maintainVisibleContentPosition={{
-          minIndexForVisible: 0
-        }}
+        estimatedItemSize={POSTER_WIDTH + 8}
         onEndReachedThreshold={1}
         // TV-specific focus navigation properties
         {...(Platform.isTV && {

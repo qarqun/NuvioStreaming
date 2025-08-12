@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  FlatList, 
   TouchableOpacity, 
   Dimensions,
   AppState,
@@ -13,6 +12,7 @@ import {
   Platform,
   Animated
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 // Removed react-native-reanimated import
 import { useNavigation } from '@react-navigation/native';
 import { NavigationProp } from '@react-navigation/native';
@@ -737,7 +737,7 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
         </View>
       </View>
       
-      <FlatList
+      <FlashList
         data={continueWatchingItems}
         renderItem={({ item }) => (
           <ContinueWatchingItem
@@ -756,6 +756,7 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
         decelerationRate="fast"
         snapToAlignment="start"
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        estimatedItemSize={280 + 16}
         // TV-specific focus navigation properties
         {...(Platform.isTV && {
           directionalLockEnabled: true,

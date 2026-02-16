@@ -90,7 +90,6 @@ const SyncSettingsScreen: React.FC = () => {
       { label: 'Watch Progress', value: remoteStats.watchProgress },
       { label: 'Library Items', value: remoteStats.libraryItems },
       { label: 'Watched Items', value: remoteStats.watchedItems },
-      { label: 'Linked Devices', value: remoteStats.linkedDevices },
     ];
   }, [remoteStats]);
   const isSignedIn = Boolean(user);
@@ -232,7 +231,6 @@ const SyncSettingsScreen: React.FC = () => {
             <View style={styles.preAuthList}>
               <Text style={[styles.preAuthItem, { color: currentTheme.colors.mediumEmphasis }]}>• Addons and plugin settings</Text>
               <Text style={[styles.preAuthItem, { color: currentTheme.colors.mediumEmphasis }]}>• Watch progress and library</Text>
-              <Text style={[styles.preAuthItem, { color: currentTheme.colors.mediumEmphasis }]}>• Linked devices and sync stats</Text>
             </View>
             {!supabaseSyncService.isConfigured() && (
               <Text style={[styles.warning, { color: '#ffb454' }]}>

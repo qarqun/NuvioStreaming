@@ -361,6 +361,9 @@ const SettingsScreen: React.FC = () => {
     if (item && item.visible === false) return false;
     return true;
   };
+  const showTraktItem = isItemVisible('trakt');
+  const showSimklItem = isItemVisible('simkl');
+  const showCloudSyncItem = isItemVisible('cloud_sync');
 
   // Filter categories based on conditions
   const visibleCategories = SETTINGS_CATEGORIES.filter(category => {
@@ -376,24 +379,35 @@ const SettingsScreen: React.FC = () => {
       case 'account':
         return (
           <SettingsCard title={t('settings.sections.account')} isTablet={isTablet}>
-            {isItemVisible('trakt') && (
-                    <SettingItem
-                      title={t('trakt.title')}
-                      description={isAuthenticated ? `@${userProfile?.username || 'User'}` : t('settings.sign_in_sync')}
-                      customIcon={<TraktIcon size={isTablet ? 24 : 20} />}
+            {showTraktItem && (
+              <SettingItem
+                title={t('trakt.title')}
+                description={isAuthenticated ? `@${userProfile?.username || 'User'}` : t('settings.sign_in_sync')}
+                customIcon={<TraktIcon size={isTablet ? 24 : 20} />}
                 renderControl={() => <ChevronRight />}
                 onPress={() => navigation.navigate('TraktSettings')}
-                isLast={!isItemVisible('simkl')}
+                isLast={!showSimklItem && !showCloudSyncItem}
                 isTablet={isTablet}
               />
             )}
-            {isItemVisible('simkl') && (
-                    <SettingItem
-                      title={t('settings.items.simkl')}
-                      description={isSimklAuthenticated ? t('settings.items.simkl_connected') : t('settings.items.simkl_desc')}
-                      customIcon={<SimklIcon size={isTablet ? 24 : 20} />}
+            {showSimklItem && (
+              <SettingItem
+                title={t('settings.items.simkl')}
+                description={isSimklAuthenticated ? t('settings.items.simkl_connected') : t('settings.items.simkl_desc')}
+                customIcon={<SimklIcon size={isTablet ? 24 : 20} />}
                 renderControl={() => <ChevronRight />}
                 onPress={() => navigation.navigate('SimklSettings')}
+                isLast={!showCloudSyncItem}
+                isTablet={isTablet}
+              />
+            )}
+            {showCloudSyncItem && (
+              <SettingItem
+                title="Nuvio Sync"
+                description="Sync data across your Nuvio devices"
+                icon="refresh-cw"
+                renderControl={() => <ChevronRight />}
+                onPress={() => (navigation as any).navigate('SyncSettings')}
                 isLast={true}
                 isTablet={isTablet}
               />
@@ -682,25 +696,35 @@ const SettingsScreen: React.FC = () => {
             contentContainerStyle={styles.scrollContent}
           >
             {/* Account */}
-            {(settingsConfig?.categories?.['account']?.visible !== false) && (isItemVisible('trakt') || isItemVisible('simkl')) && (
+            {(settingsConfig?.categories?.['account']?.visible !== false) && (showTraktItem || showSimklItem || showCloudSyncItem) && (
               <SettingsCard title={t('settings.account').toUpperCase()}>
-                {isItemVisible('trakt') && (
+                {showTraktItem && (
                   <SettingItem
                     title={t('trakt.title')}
                     description={isAuthenticated ? `@${userProfile?.username || 'User'}` : t('settings.sign_in_sync')}
                     customIcon={<TraktIcon size={20} />}
                     renderControl={() => <ChevronRight />}
                     onPress={() => navigation.navigate('TraktSettings')}
-                    isLast={!isItemVisible('simkl')}
+                    isLast={!showSimklItem && !showCloudSyncItem}
                   />
                 )}
-                {isItemVisible('simkl') && (
+                {showSimklItem && (
                   <SettingItem
                     title={t('settings.items.simkl')}
                     description={isSimklAuthenticated ? t('settings.items.simkl_connected') : t('settings.items.simkl_desc')}
                     customIcon={<SimklIcon size={20} />}
                     renderControl={() => <ChevronRight />}
                     onPress={() => navigation.navigate('SimklSettings')}
+                    isLast={!showCloudSyncItem}
+                  />
+                )}
+                {showCloudSyncItem && (
+                  <SettingItem
+                    title="Nuvio Sync"
+                    description="Sync data across your Nuvio devices"
+                    icon="refresh-cw"
+                    renderControl={() => <ChevronRight />}
+                    onPress={() => (navigation as any).navigate('SyncSettings')}
                     isLast={true}
                   />
                 )}

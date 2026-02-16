@@ -27,7 +27,6 @@ const AuthScreen: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const signupDisabled = true; // Signup disabled due to upcoming system replacement
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showWarningDetails, setShowWarningDetails] = useState(false);
@@ -145,16 +144,7 @@ const AuthScreen: React.FC = () => {
 
   const handleSubmit = async () => {
     if (loading) return;
-    
-    // Prevent signup if disabled
-    if (mode === 'signup' && signupDisabled) {
-      const msg = 'Sign up is currently disabled due to upcoming system changes';
-      setError(msg);
-      showError('Sign Up Disabled', 'Sign up is currently disabled due to upcoming system changes');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      return;
-    }
-    
+
     if (!isEmailValid) {
       const msg = 'Enter a valid email address';
       setError(msg);
@@ -404,21 +394,17 @@ const AuthScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.switchButton,
-                    signupDisabled && styles.disabledButton,
-                  ]}
-                  onPress={() => !signupDisabled && setMode('signup')}
-                  activeOpacity={signupDisabled ? 1 : 0.8}
-                  disabled={signupDisabled}
+                  style={styles.switchButton}
+                  onPress={() => setMode('signup')}
+                  activeOpacity={0.8}
                 >
                   <Text style={[
                     styles.switchText, 
                     { 
-                      color: mode === 'signup' ? '#fff' : (signupDisabled ? 'rgba(255,255,255,0.3)' : currentTheme.colors.textMuted)
+                      color: mode === 'signup' ? '#fff' : currentTheme.colors.textMuted
                     }
                   ]}>
-                    Sign Up {signupDisabled && '(Disabled)'}
+                    Sign Up
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -583,29 +569,18 @@ const AuthScreen: React.FC = () => {
               </Animated.View>
 
               {/* Switch Mode */}
-              {!signupDisabled && (
-                <TouchableOpacity 
-                  onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')} 
-                  activeOpacity={0.7}
-                  style={{ marginTop: 16 }}
-                >
-                  <Text style={[styles.switchModeText, { color: currentTheme.colors.textMuted }]}>
-                    {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-                    <Text style={{ color: currentTheme.colors.primary, fontWeight: '600' }}>
-                      {mode === 'signin' ? 'Sign up' : 'Sign in'}
-                    </Text>
+              <TouchableOpacity
+                onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                activeOpacity={0.7}
+                style={{ marginTop: 16 }}
+              >
+                <Text style={[styles.switchModeText, { color: currentTheme.colors.textMuted }]}>
+                  {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                  <Text style={{ color: currentTheme.colors.primary, fontWeight: '600' }}>
+                    {mode === 'signin' ? 'Sign up' : 'Sign in'}
                   </Text>
-                </TouchableOpacity>
-              )}
-              
-              {/* Signup disabled message */}
-              {signupDisabled && mode === 'signin' && (
-                <View style={{ marginTop: 16, alignItems: 'center' }}>
-                  <Text style={[styles.switchModeText, { color: 'rgba(255,255,255,0.5)', fontSize: 13 }]}>
-                    New account creation is temporarily disabled
-                  </Text>
-                </View>
-              )}
+                </Text>
+              </TouchableOpacity>
 
               {/* Skip sign in - more prominent when coming from onboarding */}
               <TouchableOpacity
@@ -859,4 +834,3 @@ const styles = StyleSheet.create({
 });
 
 export default AuthScreen;
-

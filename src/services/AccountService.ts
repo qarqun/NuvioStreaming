@@ -11,6 +11,7 @@ export type AuthUser = {
 
 const USER_DATA_KEY = '@user:data';
 const USER_SCOPE_KEY = '@user:current';
+const EMAIL_CONFIRMATION_REQUIRED_PREFIX = '__EMAIL_CONFIRMATION__';
 
 class AccountService {
   private static instance: AccountService;
@@ -37,11 +38,18 @@ class AccountService {
 
   async signUpWithEmail(email: string, password: string): Promise<{ user?: AuthUser; error?: string }> {
     const result = await supabaseSyncService.signUpWithEmail(email, password);
-    if (result.error || !result.user) {
-      return { error: result.error || 'Sign up failed' };
+    if (result.error) {
+      return { error: result.error };
     }
 
-    const mapped = this.mapSupabaseUser(result.user);
+    const sessionUser = supabaseSyncService.getCurrentSessionUser();
+    if (!sessionUser) {
+      return {
+        error: `${EMAIL_CONFIRMATION_REQUIRED_PREFIX}Account created. Check your email to verify, then sign in.`,
+      };
+    }
+
+    const mapped = this.mapSupabaseUser(sessionUser);
     await this.persistUser(mapped);
 
     try {

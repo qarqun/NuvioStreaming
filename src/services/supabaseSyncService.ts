@@ -193,10 +193,8 @@ class SupabaseSyncService {
         await this.setSession(response.session);
       }
 
-      if (!response.user) {
-        return { error: 'Signup failed: user not returned by Supabase' };
-      }
-
+      // In email-confirmation mode, Supabase may not establish a session immediately.
+      // Treat this as a successful signup attempt and let caller handle next UX step.
       return { user: response.user };
     } catch (error: any) {
       return { error: this.extractErrorMessage(error, 'Signup failed') };
@@ -768,7 +766,11 @@ class SupabaseSyncService {
 
   private buildRequestError(status: number, parsed: unknown, raw: string): Error {
     if (parsed && typeof parsed === 'object') {
-      const message = (parsed as any).message || (parsed as any).error_description || (parsed as any).error;
+      const message =
+        (parsed as any).message ||
+        (parsed as any).msg ||
+        (parsed as any).error_description ||
+        (parsed as any).error;
       if (typeof message === 'string' && message.trim().length > 0) {
         return new Error(message);
       }
@@ -781,7 +783,30 @@ class SupabaseSyncService {
 
   private extractErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof Error && error.message) {
-      return error.message;
+      const raw = error.message.trim();
+
+      let parsed: any = null;
+      if (raw.startsWith('{') && raw.endsWith('}')) {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          parsed = null;
+        }
+      }
+
+      const errorCode = (parsed?.error_code || parsed?.code || '').toString().toLowerCase();
+      const message = (parsed?.msg || parsed?.message || raw).toString().trim();
+
+      if (errorCode === 'invalid_credentials') {
+        return 'Invalid email or password';
+      }
+      if (errorCode === 'email_not_confirmed') {
+        return 'Email not confirmed. Check your inbox or Spam/Junk folder, verify your account, then sign in.';
+      }
+
+      if (message.length > 0) {
+        return message;
+      }
     }
     return fallback;
   }

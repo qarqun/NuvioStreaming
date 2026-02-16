@@ -11,6 +11,33 @@ import { useToast } from '../contexts/ToastContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
+const EMAIL_CONFIRMATION_REQUIRED_PREFIX = '__EMAIL_CONFIRMATION__';
+
+const normalizeAuthErrorMessage = (input: string): string => {
+  const raw = (input || '').trim();
+  if (!raw) return 'Authentication failed';
+
+  let parsed: any = null;
+  if (raw.startsWith('{') && raw.endsWith('}')) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = null;
+    }
+  }
+
+  const code = (parsed?.error_code || parsed?.code || '').toString().toLowerCase();
+  const message = (parsed?.msg || parsed?.message || raw).toString();
+
+  if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) {
+    return 'Invalid email or password';
+  }
+  if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) {
+    return 'Email not confirmed. Check your inbox or Spam/Junk folder, verify your account, then sign in.';
+  }
+
+  return message;
+};
 
 const AuthScreen: React.FC = () => {
   const { currentTheme } = useTheme();
@@ -168,8 +195,19 @@ const AuthScreen: React.FC = () => {
     setError(null);
     const err = mode === 'signin' ? await signIn(email.trim(), password) : await signUp(email.trim(), password);
     if (err) {
-      setError(err);
-      showError('Authentication Failed', err);
+      if (mode === 'signup' && err.startsWith(EMAIL_CONFIRMATION_REQUIRED_PREFIX)) {
+        setError(null);
+        setMode('signin');
+        setPassword('');
+        setConfirmPassword('');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        setLoading(false);
+        return;
+      }
+
+      const cleanError = normalizeAuthErrorMessage(err);
+      setError(cleanError);
+      showError('Authentication Failed', cleanError);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     } else {
       const msg = mode === 'signin' ? 'Logged in successfully' : 'Sign up successful';
@@ -261,7 +299,24 @@ const AuthScreen: React.FC = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         >
-          <Animated.View style={styles.centerContainer}>
+          <Animated.View
+            style={[
+              styles.centerContainer,
+              keyboardHeight > 0
+                ? {
+                    paddingTop: Platform.OS === 'ios' ? 6 : 10,
+                    transform: [
+                      {
+                        translateY:
+                          Platform.OS === 'ios'
+                            ? -Math.min(120, keyboardHeight * 0.35)
+                            : -Math.min(84, keyboardHeight * 0.22),
+                      },
+                    ],
+                  }
+                : null,
+            ]}
+          >
             <Animated.View style={[styles.card, { 
               backgroundColor: Platform.OS === 'android' ? '#121212' : 'rgba(255,255,255,0.02)',
               borderColor: Platform.OS === 'android' ? '#1f1f1f' : 'rgba(255,255,255,0.06)',

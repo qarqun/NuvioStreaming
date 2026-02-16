@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions, Animated, Easing, Keyboard } from 'react-native';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, Animated, Easing, Keyboard, StatusBar, useWindowDimensions } from 'react-native';
 import { mmkvStorage } from '../services/mmkvStorage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -10,8 +10,8 @@ import * as Haptics from 'expo-haptics';
 import { useToast } from '../contexts/ToastContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width, height } = Dimensions.get('window');
 const EMAIL_CONFIRMATION_REQUIRED_PREFIX = '__EMAIL_CONFIRMATION__';
+const AUTH_BG_GRADIENT = ['#07090F', '#0D1020', '#140B24'];
 
 const normalizeAuthErrorMessage = (input: string): string => {
   const raw = (input || '').trim();
@@ -40,12 +40,16 @@ const normalizeAuthErrorMessage = (input: string): string => {
 };
 
 const AuthScreen: React.FC = () => {
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
   const { currentTheme } = useTheme();
   const { signIn, signUp } = useAccount();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const fromOnboarding = !!route?.params?.fromOnboarding;
   const insets = useSafeAreaInsets();
+  const safeTopInset = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0);
+  const backButtonTop = safeTopInset + 8;
   const { showError, showSuccess } = useToast();
 
   const [email, setEmail] = useState('');
@@ -70,8 +74,6 @@ const AuthScreen: React.FC = () => {
   const modeAnim = useRef(new Animated.Value(0)).current; // 0 = signin, 1 = signup
   const [switchWidth, setSwitchWidth] = useState(0);
   // Legacy local toast state removed in favor of global toast
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const headerHideAnim = useRef(new Animated.Value(0)).current; // 0 visible, 1 hidden
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -137,21 +139,9 @@ const AuthScreen: React.FC = () => {
     const onShow = (e: any) => {
       const kh = e?.endCoordinates?.height ?? 0;
       setKeyboardHeight(kh);
-      Animated.timing(headerHideAnim, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
     };
     const onHide = () => {
       setKeyboardHeight(0);
-      Animated.timing(headerHideAnim, {
-        toValue: 0,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
     };
     const subShow = Keyboard.addListener(showEvt, onShow as any);
     const subHide = Keyboard.addListener(hideEvt, onHide as any);
@@ -159,7 +149,7 @@ const AuthScreen: React.FC = () => {
       subShow.remove();
       subHide.remove();
     };
-  }, [headerHideAnim]);
+  }, []);
 
   const isEmailValid = useMemo(() => /\S+@\S+\.\S+/.test(email.trim()), [email]);
   const isPasswordValid = useMemo(() => password.length >= 6, [password]);
@@ -231,14 +221,10 @@ const AuthScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1 }}>
-      {Platform.OS !== 'android' ? (
-        <LinearGradient
-          colors={['#0D1117', '#161B22', '#21262D']}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0D1117' }]} />
-      )}
+      <LinearGradient
+        colors={AUTH_BG_GRADIENT}
+        style={StyleSheet.absoluteFill}
+      />
 
       {/* Background Pattern (iOS only) */}
       {Platform.OS !== 'android' && (
@@ -260,64 +246,55 @@ const AuthScreen: React.FC = () => {
       )}
 
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Header outside KeyboardAvoidingView to avoid being overlapped */}
-        <Animated.View
-          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-          style={[
-            styles.header,
-            {
-              opacity: Animated.multiply(
-                introOpacity,
-                headerHideAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
-              ),
-              transform: [
-                {
-                  translateY: Animated.add(
-                    introTranslateY,
-                    headerHideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -12] })
-                  ),
-                },
-              ],
-            },
-          ]}
-        >
-          {navigation.canGoBack() && (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, Platform.OS === 'android' ? { top: Math.max(insets.top + 6, 18) } : null]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="arrow-back" size={22} color={currentTheme.colors.white} />
-            </TouchableOpacity>
-          )}
-          <Animated.Text style={[styles.heading, { color: currentTheme.colors.white, opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] }]}>
-            {mode === 'signin' ? 'Welcome back' : 'Create your account'}
-          </Animated.Text>
-          <Text style={[styles.subheading, { color: currentTheme.colors.textMuted }] }>
-            Sync your addons, progress and settings across devices
-          </Text>
-        </Animated.View>
+        {navigation.canGoBack() && (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backButton, { top: backButtonTop }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialIcons name="arrow-back" size={22} color={currentTheme.colors.white} />
+          </TouchableOpacity>
+        )}
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+          keyboardVerticalOffset={0}
         >
           <Animated.View
             style={[
               styles.centerContainer,
+              isTablet ? styles.centerContainerTablet : null,
               keyboardHeight > 0
                 ? {
-                    paddingTop: Platform.OS === 'ios' ? 6 : 10,
-                    transform: [
-                      {
-                        translateY:
-                          Platform.OS === 'ios'
-                            ? -Math.min(120, keyboardHeight * 0.35)
-                            : -Math.min(84, keyboardHeight * 0.22),
-                      },
-                    ],
+                    justifyContent: 'flex-start',
+                    paddingTop: Platform.OS === 'ios' ? 12 : safeTopInset + 8,
                   }
                 : null,
             ]}
           >
-            <Animated.View style={[styles.card, { 
+            <Animated.View
+              style={[
+                styles.centerHeader,
+                isTablet ? styles.centerHeaderTablet : null,
+                keyboardHeight > 0 ? styles.centerHeaderCompact : null,
+                {
+                  opacity: introOpacity,
+                  transform: [{ translateY: introTranslateY }],
+                },
+              ]}
+            >
+              <Animated.Text style={[styles.heading, { color: currentTheme.colors.white, opacity: titleOpacity, transform: [{ translateY: titleTranslateY }] }]}>
+                {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+              </Animated.Text>
+              {keyboardHeight === 0 && (
+                <Text style={[styles.subheading, { color: currentTheme.colors.textMuted }]}>
+                  Sync your addons, progress and settings across devices
+                </Text>
+              )}
+            </Animated.View>
+
+            <Animated.View style={[styles.card, isTablet ? styles.cardTablet : null, keyboardHeight > 0 ? styles.cardCompact : null, { 
               backgroundColor: Platform.OS === 'android' ? '#121212' : 'rgba(255,255,255,0.02)',
               borderColor: Platform.OS === 'android' ? '#1f1f1f' : 'rgba(255,255,255,0.06)',
               ...(Platform.OS !== 'android' ? {
@@ -601,8 +578,19 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: 64,
     paddingBottom: 8,
+  },
+  centerHeader: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 18,
+    paddingHorizontal: 20,
+  },
+  centerHeaderTablet: {
+    maxWidth: 620,
+  },
+  centerHeaderCompact: {
+    marginBottom: 10,
   },
   logoContainer: {
     position: 'relative',
@@ -639,10 +627,13 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingBottom: 28,
+  },
+  centerContainerTablet: {
+    paddingHorizontal: 36,
   },
   card: {
     width: '100%',
@@ -651,6 +642,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     elevation: 20,
+  },
+  cardTablet: {
+    maxWidth: 560,
+  },
+  cardCompact: {
+    padding: 18,
+    borderRadius: 16,
   },
   switchRow: {
     flexDirection: 'row',
@@ -739,7 +737,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 16,
-    top: 8,
+    zIndex: 20,
   },
   switchModeText: {
     textAlign: 'center',

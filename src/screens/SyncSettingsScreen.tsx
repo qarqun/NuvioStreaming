@@ -1,28 +1,37 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import ScreenHeader from '../components/common/ScreenHeader';
 import { useTheme } from '../contexts/ThemeContext';
 import CustomAlert from '../components/CustomAlert';
 import { supabaseSyncService, SupabaseUser, RemoteSyncStats } from '../services/supabaseSyncService';
 import { useAccount } from '../contexts/AccountContext';
+import { useTraktContext } from '../contexts/TraktContext';
+import { useSimklContext } from '../contexts/SimklContext';
+import { useTranslation } from 'react-i18next';
 
 const SyncSettingsScreen: React.FC = () => {
   const { currentTheme } = useTheme();
+  const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAccount();
+  const { isAuthenticated: traktAuthenticated } = useTraktContext();
+  const { isAuthenticated: simklAuthenticated } = useSimklContext();
 
   const [loading, setLoading] = useState(false);
   const [syncCodeLoading, setSyncCodeLoading] = useState(false);
@@ -84,6 +93,15 @@ const SyncSettingsScreen: React.FC = () => {
       { label: 'Linked Devices', value: remoteStats.linkedDevices },
     ];
   }, [remoteStats]);
+  const isSignedIn = Boolean(user);
+  const externalSyncServices = useMemo(
+    () => [
+      traktAuthenticated ? 'Trakt' : null,
+      simklAuthenticated ? 'Simkl' : null,
+    ].filter(Boolean) as string[],
+    [traktAuthenticated, simklAuthenticated]
+  );
+  const externalSyncActive = externalSyncServices.length > 0;
 
   const handleManualSync = async () => {
     setSyncCodeLoading(true);
@@ -123,24 +141,26 @@ const SyncSettingsScreen: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: currentTheme.colors.darkBackground }]}>
-        <StatusBar barStyle="light-content" />
-        <ScreenHeader title="Nuvio Sync" showBackButton onBackPress={() => navigation.goBack()} />
+  return (
+      <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.darkBackground }]}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.colors.highEmphasis} />
+          <Text style={[styles.backText, { color: currentTheme.colors.highEmphasis }]}>{t('settings.title')}</Text>
+        </TouchableOpacity>
+        <View style={styles.headerActions} />
+      </View>
+      <Text style={[styles.screenTitle, { color: currentTheme.colors.highEmphasis }]}>Nuvio Sync</Text>
+
+      {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={currentTheme.colors.primary} size="large" />
         </View>
-      </View>
-    );
-  }
+      ) : (
+      <>
 
-  return (
-      <View style={[styles.container, { backgroundColor: currentTheme.colors.darkBackground }]}>
-      <StatusBar barStyle="light-content" />
-      <ScreenHeader title="Nuvio Sync" showBackButton onBackPress={() => navigation.goBack()} />
-
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet ? styles.contentTablet : null, { paddingBottom: insets.bottom + 24 }]}>
         <View style={[styles.heroCard, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
           <View style={styles.heroTopRow}>
             <View style={styles.heroTitleWrap}>
@@ -152,6 +172,18 @@ const SyncSettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        <View style={[styles.noteCard, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="info-outline" size={18} color={currentTheme.colors.highEmphasis} />
+            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>External Sync Priority</Text>
+          </View>
+          <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+            {externalSyncActive
+              ? `${externalSyncServices.join(' + ')} is active. Watch progress and library updates are managed by these services instead of Nuvio cloud database.`
+              : 'If Trakt or Simkl sync is enabled, watch progress and library updates will use those services instead of Nuvio cloud database.'}
+          </Text>
+        </View>
+
         <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
           <View style={styles.sectionHeader}>
             <MaterialIcons name="person-outline" size={18} color={currentTheme.colors.highEmphasis} />
@@ -161,7 +193,7 @@ const SyncSettingsScreen: React.FC = () => {
             {user?.email ? `Signed in as ${user.email}` : 'Not signed in'}
           </Text>
           <View style={styles.buttonRow}>
-            {!user ? (
+            {!isSignedIn ? (
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: currentTheme.colors.primary }]}
                 onPress={() => navigation.navigate('Account')}
@@ -188,83 +220,109 @@ const SyncSettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="link" size={18} color={currentTheme.colors.highEmphasis} />
-            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Connection</Text>
-          </View>
-          <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>{authLabel}</Text>
-          <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
-            Effective owner: {ownerId || 'Unavailable'}
-          </Text>
-          {!supabaseSyncService.isConfigured() && (
-            <Text style={[styles.warning, { color: '#ffb454' }]}>
-              Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to enable sync.
-            </Text>
-          )}
-        </View>
-
-        <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="storage" size={18} color={currentTheme.colors.highEmphasis} />
-            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Database Stats</Text>
-          </View>
-          {!remoteStats ? (
-            <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
-              Sign in to load remote data counts.
-            </Text>
-          ) : (
-            <View style={styles.statsGrid}>
-              {statItems.map((item) => (
-                <View key={item.label} style={[styles.statTile, { backgroundColor: currentTheme.colors.darkBackground, borderColor: currentTheme.colors.elevation2 }]}>
-                  <Text style={[styles.statValue, { color: currentTheme.colors.highEmphasis }]}>{item.value}</Text>
-                  <Text style={[styles.statLabel, { color: currentTheme.colors.mediumEmphasis }]}>{item.label}</Text>
-                </View>
-              ))}
+        {!isSignedIn ? (
+          <View style={[styles.card, styles.preAuthCard, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="sync-lock" size={18} color={currentTheme.colors.highEmphasis} />
+              <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Before You Sync</Text>
             </View>
-          )}
-        </View>
-
-        <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="sync" size={18} color={currentTheme.colors.highEmphasis} />
-            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Actions</Text>
+            <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+              Sign in to start cloud sync and keep your data consistent across devices.
+            </Text>
+            <View style={styles.preAuthList}>
+              <Text style={[styles.preAuthItem, { color: currentTheme.colors.mediumEmphasis }]}>• Addons and plugin settings</Text>
+              <Text style={[styles.preAuthItem, { color: currentTheme.colors.mediumEmphasis }]}>• Watch progress and library</Text>
+              <Text style={[styles.preAuthItem, { color: currentTheme.colors.mediumEmphasis }]}>• Linked devices and sync stats</Text>
+            </View>
+            {!supabaseSyncService.isConfigured() && (
+              <Text style={[styles.warning, { color: '#ffb454' }]}>
+                Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to enable sync.
+              </Text>
+            )}
           </View>
-          <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
-            Pull to refresh this device from cloud, or upload this device as the latest source.
-          </Text>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
-              style={[
-                styles.button,
-                styles.primaryButton,
-                { backgroundColor: currentTheme.colors.primary },
-                (syncCodeLoading || !supabaseSyncService.isConfigured()) && styles.buttonDisabled,
-              ]}
-              onPress={handleManualSync}
-            >
-              {syncCodeLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Pull From Cloud</Text>
+        ) : (
+          <>
+            <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="link" size={18} color={currentTheme.colors.highEmphasis} />
+                <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Connection</Text>
+              </View>
+              <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>{authLabel}</Text>
+              <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+                Effective owner: {ownerId || 'Unavailable'}
+              </Text>
+              {!supabaseSyncService.isConfigured() && (
+                <Text style={[styles.warning, { color: '#ffb454' }]}>
+                  Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to enable sync.
+                </Text>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
-              style={[
-                styles.button,
-                styles.secondaryButton,
-                { backgroundColor: currentTheme.colors.elevation2, borderColor: currentTheme.colors.elevation2 },
-                (syncCodeLoading || !supabaseSyncService.isConfigured()) && styles.buttonDisabled,
-              ]}
-              onPress={handleUploadLocalData}
-            >
-              <Text style={styles.buttonText}>Upload This Device</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="storage" size={18} color={currentTheme.colors.highEmphasis} />
+                <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Database Stats</Text>
+              </View>
+              {!remoteStats ? (
+                <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+                  Sign in to load remote data counts.
+                </Text>
+              ) : (
+                <View style={styles.statsGrid}>
+                  {statItems.map((item) => (
+                    <View key={item.label} style={[styles.statTile, { backgroundColor: currentTheme.colors.darkBackground, borderColor: currentTheme.colors.elevation2 }]}>
+                      <Text style={[styles.statValue, { color: currentTheme.colors.highEmphasis }]}>{item.value}</Text>
+                      <Text style={[styles.statLabel, { color: currentTheme.colors.mediumEmphasis }]}>{item.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="sync" size={18} color={currentTheme.colors.highEmphasis} />
+                <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Actions</Text>
+              </View>
+              <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+                Pull to refresh this device from cloud, or upload this device as the latest source.
+              </Text>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
+                  style={[
+                    styles.button,
+                    styles.primaryButton,
+                    { backgroundColor: currentTheme.colors.primary },
+                    (syncCodeLoading || !supabaseSyncService.isConfigured()) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleManualSync}
+                >
+                  {syncCodeLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.buttonText}>Pull From Cloud</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
+                  style={[
+                    styles.button,
+                    styles.secondaryButton,
+                    { backgroundColor: currentTheme.colors.elevation2, borderColor: currentTheme.colors.elevation2 },
+                    (syncCodeLoading || !supabaseSyncService.isConfigured()) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleUploadLocalData}
+                >
+                  <Text style={styles.buttonText}>Upload This Device</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
+      </>
+      )}
 
       <CustomAlert
         visible={alertVisible}
@@ -273,7 +331,7 @@ const SyncSettingsScreen: React.FC = () => {
         actions={alertActions}
         onClose={() => setAlertVisible(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -286,9 +344,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  backText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerActions: {
+    minWidth: 32,
+  },
+  screenTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 10,
+  },
   content: {
     padding: 16,
     gap: 14,
+  },
+  contentTablet: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 980,
   },
   heroCard: {
     borderWidth: 1,
@@ -317,6 +407,23 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     gap: 10,
+  },
+  noteCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
+  preAuthCard: {
+    gap: 12,
+  },
+  preAuthList: {
+    gap: 6,
+    marginTop: 2,
+  },
+  preAuthItem: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   sectionHeader: {
     flexDirection: 'row',

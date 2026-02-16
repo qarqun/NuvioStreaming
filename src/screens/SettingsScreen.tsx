@@ -379,6 +379,23 @@ const SettingsScreen: React.FC = () => {
       case 'account':
         return (
           <SettingsCard title={t('settings.sections.account')} isTablet={isTablet}>
+            {showCloudSyncItem && (
+              <SettingItem
+                title="Nuvio Sync"
+                description="Sync data across your Nuvio devices"
+                customIcon={
+                  <FastImage
+                    source={require('../../assets/nuvio-sync-icon-og.png')}
+                    style={[styles.syncLogoIcon, isTablet ? styles.syncLogoIconTablet : null]}
+                    resizeMode={FastImage.resizeMode.contain}
+                  />
+                }
+                renderControl={() => <ChevronRight />}
+                onPress={() => (navigation as any).navigate('SyncSettings')}
+                isLast={!showTraktItem && !showSimklItem}
+                isTablet={isTablet}
+              />
+            )}
             {showTraktItem && (
               <SettingItem
                 title={t('trakt.title')}
@@ -386,7 +403,7 @@ const SettingsScreen: React.FC = () => {
                 customIcon={<TraktIcon size={isTablet ? 24 : 20} />}
                 renderControl={() => <ChevronRight />}
                 onPress={() => navigation.navigate('TraktSettings')}
-                isLast={!showSimklItem && !showCloudSyncItem}
+                isLast={!showSimklItem}
                 isTablet={isTablet}
               />
             )}
@@ -397,17 +414,6 @@ const SettingsScreen: React.FC = () => {
                 customIcon={<SimklIcon size={isTablet ? 24 : 20} />}
                 renderControl={() => <ChevronRight />}
                 onPress={() => navigation.navigate('SimklSettings')}
-                isLast={!showCloudSyncItem}
-                isTablet={isTablet}
-              />
-            )}
-            {showCloudSyncItem && (
-              <SettingItem
-                title="Nuvio Sync"
-                description="Sync data across your Nuvio devices"
-                icon="refresh-cw"
-                renderControl={() => <ChevronRight />}
-                onPress={() => (navigation as any).navigate('SyncSettings')}
                 isLast={true}
                 isTablet={isTablet}
               />
@@ -698,6 +704,22 @@ const SettingsScreen: React.FC = () => {
             {/* Account */}
             {(settingsConfig?.categories?.['account']?.visible !== false) && (showTraktItem || showSimklItem || showCloudSyncItem) && (
               <SettingsCard title={t('settings.account').toUpperCase()}>
+                {showCloudSyncItem && (
+                  <SettingItem
+                    title="Nuvio Sync"
+                    description="Sync data across your Nuvio devices"
+                    customIcon={
+                      <FastImage
+                        source={require('../../assets/nuvio-sync-icon-og.png')}
+                        style={styles.syncLogoIcon}
+                        resizeMode={FastImage.resizeMode.contain}
+                      />
+                    }
+                    renderControl={() => <ChevronRight />}
+                    onPress={() => (navigation as any).navigate('SyncSettings')}
+                    isLast={!showTraktItem && !showSimklItem}
+                  />
+                )}
                 {showTraktItem && (
                   <SettingItem
                     title={t('trakt.title')}
@@ -705,7 +727,7 @@ const SettingsScreen: React.FC = () => {
                     customIcon={<TraktIcon size={20} />}
                     renderControl={() => <ChevronRight />}
                     onPress={() => navigation.navigate('TraktSettings')}
-                    isLast={!showSimklItem && !showCloudSyncItem}
+                    isLast={!showSimklItem}
                   />
                 )}
                 {showSimklItem && (
@@ -715,16 +737,6 @@ const SettingsScreen: React.FC = () => {
                     customIcon={<SimklIcon size={20} />}
                     renderControl={() => <ChevronRight />}
                     onPress={() => navigation.navigate('SimklSettings')}
-                    isLast={!showCloudSyncItem}
-                  />
-                )}
-                {showCloudSyncItem && (
-                  <SettingItem
-                    title="Nuvio Sync"
-                    description="Sync data across your Nuvio devices"
-                    icon="refresh-cw"
-                    renderControl={() => <ChevronRight />}
-                    onPress={() => (navigation as any).navigate('SyncSettings')}
                     isLast={true}
                   />
                 )}
@@ -952,7 +964,7 @@ const SettingsScreen: React.FC = () => {
 
             <View style={styles.brandLogoContainer}>
               <FastImage
-                source={require('../../assets/nuviotext.png')}
+                source={require('../../assets/text_only_og.png')}
                 style={styles.brandLogo}
                 resizeMode={FastImage.resizeMode.contain}
               />
@@ -1221,6 +1233,14 @@ const styles = StyleSheet.create({
   monkeyAnimation: {
     width: 180,
     height: 180,
+  },
+  syncLogoIcon: {
+    width: 20,
+    height: 20,
+  },
+  syncLogoIconTablet: {
+    width: 24,
+    height: 24,
   },
   brandLogoContainer: {
     alignItems: 'center',

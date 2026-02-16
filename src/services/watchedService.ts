@@ -166,6 +166,31 @@ class WatchedService {
         }
     }
 
+    public async reconcileRemoteWatchedItems(items: LocalWatchedItem[]): Promise<void> {
+        const normalizedRemote = items
+            .map((item) => this.normalizeWatchedItem(item))
+            .filter((item) => Boolean(item.content_id));
+
+        // Guard: do not wipe local watched data if backend temporarily returns empty.
+        if (normalizedRemote.length === 0) {
+            return;
+        }
+
+        await this.saveWatchedItems(normalizedRemote);
+        this.notifyWatchedSubscribers();
+
+        for (const item of normalizedRemote) {
+            if (item.content_type === 'movie') {
+                await this.setLocalWatchedStatus(item.content_id, 'movie', true, undefined, new Date(item.watched_at));
+                continue;
+            }
+
+            if (item.season == null || item.episode == null) continue;
+            const episodeId = `${item.content_id}:${item.season}:${item.episode}`;
+            await this.setLocalWatchedStatus(item.content_id, 'series', true, episodeId, new Date(item.watched_at));
+        }
+    }
+
     /**
      * Mark a movie as watched
      * @param imdbId - The IMDb ID of the movie

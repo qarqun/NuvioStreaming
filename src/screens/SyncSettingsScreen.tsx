@@ -5,17 +5,17 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ScreenHeader from '../components/common/ScreenHeader';
 import { useTheme } from '../contexts/ThemeContext';
 import CustomAlert from '../components/CustomAlert';
-import { supabaseSyncService, SupabaseUser, LinkedDevice } from '../services/supabaseSyncService';
+import { supabaseSyncService, SupabaseUser, RemoteSyncStats } from '../services/supabaseSyncService';
 import { useAccount } from '../contexts/AccountContext';
 
 const SyncSettingsScreen: React.FC = () => {
@@ -28,12 +28,7 @@ const SyncSettingsScreen: React.FC = () => {
   const [syncCodeLoading, setSyncCodeLoading] = useState(false);
   const [sessionUser, setSessionUser] = useState<SupabaseUser | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
-  const [linkedDevices, setLinkedDevices] = useState<LinkedDevice[]>([]);
-  const [lastCode, setLastCode] = useState<string>('');
-  const [pin, setPin] = useState('');
-  const [claimCode, setClaimCode] = useState('');
-  const [claimPin, setClaimPin] = useState('');
-  const [deviceName, setDeviceName] = useState('');
+  const [remoteStats, setRemoteStats] = useState<RemoteSyncStats | null>(null);
 
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
@@ -57,8 +52,8 @@ const SyncSettingsScreen: React.FC = () => {
       setSessionUser(supabaseSyncService.getCurrentSessionUser());
       const owner = await supabaseSyncService.getEffectiveOwnerId();
       setOwnerId(owner);
-      const devices = await supabaseSyncService.getLinkedDevices();
-      setLinkedDevices(devices);
+      const stats = await supabaseSyncService.getRemoteStats();
+      setRemoteStats(stats);
     } catch (error: any) {
       openAlert('Sync Error', error?.message || 'Failed to load sync state');
     } finally {
@@ -78,103 +73,42 @@ const SyncSettingsScreen: React.FC = () => {
     return `Email session${sessionUser.email ? ` (${sessionUser.email})` : ''}`;
   }, [sessionUser]);
 
-  const handleGenerateCode = async () => {
-    if (!pin.trim()) {
-      openAlert('PIN Required', 'Enter a PIN before generating a sync code.');
-      return;
-    }
-    setSyncCodeLoading(true);
-    try {
-      const result = await supabaseSyncService.generateSyncCode(pin.trim());
-      if (result.error || !result.code) {
-        openAlert('Generate Failed', result.error || 'Unable to generate sync code');
-      } else {
-        setLastCode(result.code);
-        openAlert('Sync Code Ready', `Code: ${result.code}`);
-        await loadSyncState();
-      }
-    } finally {
-      setSyncCodeLoading(false);
-    }
-  };
-
-  const handleGetCode = async () => {
-    if (!pin.trim()) {
-      openAlert('PIN Required', 'Enter your PIN to retrieve the current sync code.');
-      return;
-    }
-    setSyncCodeLoading(true);
-    try {
-      const result = await supabaseSyncService.getSyncCode(pin.trim());
-      if (result.error || !result.code) {
-        openAlert('Fetch Failed', result.error || 'Unable to fetch sync code');
-      } else {
-        setLastCode(result.code);
-        openAlert('Current Sync Code', `Code: ${result.code}`);
-      }
-    } finally {
-      setSyncCodeLoading(false);
-    }
-  };
-
-  const handleClaimCode = async () => {
-    if (!claimCode.trim() || !claimPin.trim()) {
-      openAlert('Missing Details', 'Enter both sync code and PIN to claim.');
-      return;
-    }
-    setSyncCodeLoading(true);
-    try {
-      const result = await supabaseSyncService.claimSyncCode(
-        claimCode.trim().toUpperCase(),
-        claimPin.trim(),
-        deviceName.trim() || undefined
-      );
-      if (!result.success) {
-        openAlert('Claim Failed', result.message);
-      } else {
-        openAlert('Device Linked', result.message);
-        setClaimCode('');
-        setClaimPin('');
-        await loadSyncState();
-      }
-    } finally {
-      setSyncCodeLoading(false);
-    }
-  };
+  const statItems = useMemo(() => {
+    if (!remoteStats) return [];
+    return [
+      { label: 'Plugins', value: remoteStats.plugins },
+      { label: 'Addons', value: remoteStats.addons },
+      { label: 'Watch Progress', value: remoteStats.watchProgress },
+      { label: 'Library Items', value: remoteStats.libraryItems },
+      { label: 'Watched Items', value: remoteStats.watchedItems },
+      { label: 'Linked Devices', value: remoteStats.linkedDevices },
+    ];
+  }, [remoteStats]);
 
   const handleManualSync = async () => {
     setSyncCodeLoading(true);
     try {
-      await supabaseSyncService.syncNow();
-      openAlert('Sync Complete', 'Manual sync completed successfully.');
+      await supabaseSyncService.pullAllToLocal();
+      openAlert('Cloud Data Pulled', 'Latest cloud data was pulled to this device.');
       await loadSyncState();
     } catch (error: any) {
-      openAlert('Sync Failed', error?.message || 'Manual sync failed');
+      openAlert('Pull Failed', error?.message || 'Failed to pull cloud data');
     } finally {
       setSyncCodeLoading(false);
     }
   };
 
-  const handleUnlinkDevice = (deviceUserId: string) => {
-    openAlert('Unlink Device', 'Are you sure you want to unlink this device?', [
-      { label: 'Cancel', onPress: () => {} },
-      {
-        label: 'Unlink',
-        onPress: async () => {
-          setSyncCodeLoading(true);
-          try {
-            const result = await supabaseSyncService.unlinkDevice(deviceUserId);
-            if (!result.success) {
-              openAlert('Unlink Failed', result.error || 'Unable to unlink device');
-            } else {
-              await loadSyncState();
-            }
-          } finally {
-            setSyncCodeLoading(false);
-          }
-        },
-      },
-    ]);
+  const handleUploadLocalData = async () => {
+    setSyncCodeLoading(true);
+    try {
+      await supabaseSyncService.pushAllLocalData();
+      openAlert('Upload Complete', 'This device data has been uploaded to cloud.');
+      await loadSyncState();
+    } catch (error: any) {
+      openAlert('Upload Failed', error?.message || 'Failed to upload local data');
+    } finally {
+      setSyncCodeLoading(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -207,8 +141,22 @@ const SyncSettingsScreen: React.FC = () => {
       <ScreenHeader title="Nuvio Sync" showBackButton onBackPress={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
+        <View style={[styles.heroCard, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroTitleWrap}>
+              <Text style={[styles.heroTitle, { color: currentTheme.colors.highEmphasis }]}>Cloud Sync</Text>
+              <Text style={[styles.heroSubtitle, { color: currentTheme.colors.mediumEmphasis }]}>
+                Keep your addons, progress and library aligned across devices.
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Account</Text>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="person-outline" size={18} color={currentTheme.colors.highEmphasis} />
+            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Account</Text>
+          </View>
           <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
             {user?.email ? `Signed in as ${user.email}` : 'Not signed in'}
           </Text>
@@ -241,7 +189,10 @@ const SyncSettingsScreen: React.FC = () => {
         </View>
 
         <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Connection Status</Text>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="link" size={18} color={currentTheme.colors.highEmphasis} />
+            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Connection</Text>
+          </View>
           <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>{authLabel}</Text>
           <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
             Effective owner: {ownerId || 'Unavailable'}
@@ -254,108 +205,65 @@ const SyncSettingsScreen: React.FC = () => {
         </View>
 
         <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Sync Code</Text>
-          <TextInput
-            value={pin}
-            onChangeText={setPin}
-            placeholder="PIN"
-            placeholderTextColor={currentTheme.colors.mediumEmphasis}
-            style={[styles.input, { color: currentTheme.colors.white, borderColor: currentTheme.colors.elevation2 }]}
-            secureTextEntry
-          />
-          {!!lastCode && (
-            <Text style={[styles.codeText, { color: currentTheme.colors.primary }]}>
-              Latest code: {lastCode}
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="storage" size={18} color={currentTheme.colors.highEmphasis} />
+            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Database Stats</Text>
+          </View>
+          {!remoteStats ? (
+            <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+              Sign in to load remote data counts.
             </Text>
+          ) : (
+            <View style={styles.statsGrid}>
+              {statItems.map((item) => (
+                <View key={item.label} style={[styles.statTile, { backgroundColor: currentTheme.colors.darkBackground, borderColor: currentTheme.colors.elevation2 }]}>
+                  <Text style={[styles.statValue, { color: currentTheme.colors.highEmphasis }]}>{item.value}</Text>
+                  <Text style={[styles.statLabel, { color: currentTheme.colors.mediumEmphasis }]}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
           )}
+        </View>
+
+        <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="sync" size={18} color={currentTheme.colors.highEmphasis} />
+            <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Actions</Text>
+          </View>
+          <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
+            Pull to refresh this device from cloud, or upload this device as the latest source.
+          </Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
-              style={[styles.button, { backgroundColor: currentTheme.colors.primary }]}
-              onPress={handleGenerateCode}
+              style={[
+                styles.button,
+                styles.primaryButton,
+                { backgroundColor: currentTheme.colors.primary },
+                (syncCodeLoading || !supabaseSyncService.isConfigured()) && styles.buttonDisabled,
+              ]}
+              onPress={handleManualSync}
             >
-              <Text style={styles.buttonText}>Generate Code</Text>
+              {syncCodeLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Pull From Cloud</Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
-              style={[styles.button, { backgroundColor: currentTheme.colors.elevation2 }]}
-              onPress={handleGetCode}
+              style={[
+                styles.button,
+                styles.secondaryButton,
+                { backgroundColor: currentTheme.colors.elevation2, borderColor: currentTheme.colors.elevation2 },
+                (syncCodeLoading || !supabaseSyncService.isConfigured()) && styles.buttonDisabled,
+              ]}
+              onPress={handleUploadLocalData}
             >
-              <Text style={styles.buttonText}>Get Existing Code</Text>
+              <Text style={styles.buttonText}>Upload This Device</Text>
             </TouchableOpacity>
           </View>
         </View>
-
-        <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Claim Sync Code</Text>
-          <TextInput
-            value={claimCode}
-            onChangeText={setClaimCode}
-            placeholder="SYNC-CODE"
-            autoCapitalize="characters"
-            placeholderTextColor={currentTheme.colors.mediumEmphasis}
-            style={[styles.input, { color: currentTheme.colors.white, borderColor: currentTheme.colors.elevation2 }]}
-          />
-          <TextInput
-            value={claimPin}
-            onChangeText={setClaimPin}
-            placeholder="PIN"
-            secureTextEntry
-            placeholderTextColor={currentTheme.colors.mediumEmphasis}
-            style={[styles.input, { color: currentTheme.colors.white, borderColor: currentTheme.colors.elevation2 }]}
-          />
-          <TextInput
-            value={deviceName}
-            onChangeText={setDeviceName}
-            placeholder="Device name (optional)"
-            placeholderTextColor={currentTheme.colors.mediumEmphasis}
-            style={[styles.input, { color: currentTheme.colors.white, borderColor: currentTheme.colors.elevation2 }]}
-          />
-          <TouchableOpacity
-            disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
-            style={[styles.button, { backgroundColor: currentTheme.colors.primary }]}
-            onPress={handleClaimCode}
-          >
-            <Text style={styles.buttonText}>Claim Code</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: currentTheme.colors.elevation1, borderColor: currentTheme.colors.elevation2 }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.highEmphasis }]}>Linked Devices</Text>
-          {linkedDevices.length === 0 && (
-            <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>No linked devices.</Text>
-          )}
-          {linkedDevices.map((device) => (
-            <View key={`${device.owner_id}:${device.device_user_id}`} style={styles.deviceRow}>
-              <View style={styles.deviceInfo}>
-                <Text style={[styles.deviceName, { color: currentTheme.colors.highEmphasis }]}>
-                  {device.device_name || 'Unnamed device'}
-                </Text>
-                <Text style={[styles.deviceMeta, { color: currentTheme.colors.mediumEmphasis }]}>
-                  {device.device_user_id}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.unlinkButton, { borderColor: currentTheme.colors.elevation2 }]}
-                onPress={() => handleUnlinkDevice(device.device_user_id)}
-              >
-                <Text style={[styles.unlinkText, { color: currentTheme.colors.white }]}>Unlink</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          disabled={syncCodeLoading || !supabaseSyncService.isConfigured()}
-          style={[styles.syncNowButton, { backgroundColor: currentTheme.colors.primary }]}
-          onPress={handleManualSync}
-        >
-          {syncCodeLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sync Now</Text>
-          )}
-        </TouchableOpacity>
       </ScrollView>
 
       <CustomAlert
@@ -380,7 +288,29 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    gap: 16,
+    gap: 14,
+  },
+  heroCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroTitleWrap: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   card: {
     borderWidth: 1,
@@ -388,8 +318,13 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 10,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   cardText: {
@@ -400,12 +335,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  input: {
+  statsGrid: {
+    marginTop: 2,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statTile: {
+    width: '48%',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -419,48 +369,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
   },
+  primaryButton: {
+    borderWidth: 0,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+  },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
   buttonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 13,
-  },
-  codeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  deviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 6,
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  deviceMeta: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  unlinkButton: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  unlinkText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  syncNowButton: {
-    minHeight: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 

@@ -97,6 +97,15 @@ export type LinkedDevice = {
   linked_at: string;
 };
 
+export type RemoteSyncStats = {
+  plugins: number;
+  addons: number;
+  watchProgress: number;
+  libraryItems: number;
+  watchedItems: number;
+  linkedDevices: number;
+};
+
 type PushTarget = 'plugins' | 'addons' | 'watch_progress' | 'library' | 'watched_items';
 
 class SupabaseSyncService {
@@ -372,6 +381,63 @@ class SupabaseSyncService {
     }
   }
 
+  public async getRemoteStats(): Promise<RemoteSyncStats | null> {
+    try {
+      const token = await this.getValidAccessToken();
+      if (!token) return null;
+
+      const ownerId = await this.getEffectiveOwnerId();
+      if (!ownerId) return null;
+
+      const ownerFilter = encodeURIComponent(ownerId);
+      const [
+        pluginRows,
+        addonRows,
+        watchRows,
+        libraryRows,
+        watchedRows,
+        deviceRows,
+      ] = await Promise.all([
+        this.request<Array<{ id: string }>>(`/rest/v1/plugins?select=id&user_id=eq.${ownerFilter}`, {
+          method: 'GET',
+          authToken: token,
+        }),
+        this.request<Array<{ id: string }>>(`/rest/v1/addons?select=id&user_id=eq.${ownerFilter}`, {
+          method: 'GET',
+          authToken: token,
+        }),
+        this.request<Array<{ id: string }>>(`/rest/v1/watch_progress?select=id&user_id=eq.${ownerFilter}`, {
+          method: 'GET',
+          authToken: token,
+        }),
+        this.request<Array<{ id: string }>>(`/rest/v1/library_items?select=id&user_id=eq.${ownerFilter}`, {
+          method: 'GET',
+          authToken: token,
+        }),
+        this.request<Array<{ id: string }>>(`/rest/v1/watched_items?select=id&user_id=eq.${ownerFilter}`, {
+          method: 'GET',
+          authToken: token,
+        }),
+        this.request<Array<{ device_user_id: string }>>(`/rest/v1/linked_devices?select=device_user_id&owner_id=eq.${ownerFilter}`, {
+          method: 'GET',
+          authToken: token,
+        }),
+      ]);
+
+      return {
+        plugins: pluginRows?.length || 0,
+        addons: addonRows?.length || 0,
+        watchProgress: watchRows?.length || 0,
+        libraryItems: libraryRows?.length || 0,
+        watchedItems: watchedRows?.length || 0,
+        linkedDevices: deviceRows?.length || 0,
+      };
+    } catch (error) {
+      logger.warn('[SupabaseSyncService] Failed to fetch remote stats:', error);
+      return null;
+    }
+  }
+
   public async unlinkDevice(deviceUserId: string): Promise<{ success: boolean; error?: string }> {
     try {
       await this.callRpc<void>('unlink_device', { p_device_user_id: deviceUserId });
@@ -423,21 +489,8 @@ class SupabaseSyncService {
       });
     });
     logger.log(`[SupabaseSyncService] runStartupSync: step=pull_addons:done ok=${addonPullOk}`);
-
-    if (pluginPullOk) {
-      logger.log('[SupabaseSyncService] runStartupSync: step=push_plugins:start');
-      await this.safeRun('push_plugins', async () => {
-        await this.pushPluginsFromLocal();
-      });
-      logger.log('[SupabaseSyncService] runStartupSync: step=push_plugins:done');
-    }
-
-    if (addonPullOk) {
-      logger.log('[SupabaseSyncService] runStartupSync: step=push_addons:start');
-      await this.safeRun('push_addons', async () => {
-        await this.pushAddonsFromLocal();
-      });
-      logger.log('[SupabaseSyncService] runStartupSync: step=push_addons:done');
+    if (!pluginPullOk || !addonPullOk) {
+      logger.warn('[SupabaseSyncService] runStartupSync: one or more pull steps failed; skipped startup push-by-design');
     }
 
     const traktConnected = await this.isTraktConnected();
@@ -464,22 +517,8 @@ class SupabaseSyncService {
       });
     });
 
-    if (watchPullOk) {
-      await this.safeRun('push_watch_progress', async () => {
-        await this.pushWatchProgressFromLocal();
-      });
-    }
-
-    if (libraryPullOk) {
-      await this.safeRun('push_library', async () => {
-        await this.pushLibraryFromLocal();
-      });
-    }
-
-    if (watchedPullOk) {
-      await this.safeRun('push_watched_items', async () => {
-        await this.pushWatchedItemsFromLocal();
-      });
+    if (!watchPullOk || !libraryPullOk || !watchedPullOk) {
+      logger.warn('[SupabaseSyncService] runStartupSync: one or more content pulls failed; skipped startup push-by-design');
     }
   }
 
@@ -896,6 +935,11 @@ class SupabaseSyncService {
 
     const localRepos = await localScraperService.getRepositories();
     const byUrl = new Map(localRepos.map((repo) => [this.normalizeUrl(repo.url), repo]));
+    const remoteSet = new Set(
+      (rows || [])
+        .map((row) => (row?.url ? this.normalizeUrl(row.url) : null))
+        .filter((url): url is string => Boolean(url))
+    );
 
     for (const row of rows || []) {
       if (!row.url) continue;
@@ -922,6 +966,25 @@ class SupabaseSyncService {
           enabled: typeof row.enabled === 'boolean' ? row.enabled : existing.enabled,
         });
       }
+    }
+
+    // Reconcile removals only when remote has at least one entry to avoid wiping local
+    // data if backend temporarily returns an empty set.
+    if (remoteSet.size > 0) {
+      let removedCount = 0;
+      for (const repo of localRepos) {
+        const normalized = this.normalizeUrl(repo.url);
+        if (remoteSet.has(normalized)) continue;
+        try {
+          await localScraperService.removeRepository(repo.id);
+          removedCount += 1;
+        } catch (error) {
+          logger.warn('[SupabaseSyncService] Failed to remove local plugin repository missing in remote set:', repo.name, error);
+        }
+      }
+      logger.log(`[SupabaseSyncService] pullPluginsToLocal: removedLocalExtras=${removedCount}`);
+    } else {
+      logger.log('[SupabaseSyncService] pullPluginsToLocal: remote set empty, skipped local prune');
     }
   }
 
@@ -951,6 +1014,15 @@ class SupabaseSyncService {
       }
     );
     logger.log(`[SupabaseSyncService] pullAddonsToLocal: remoteCount=${rows?.length || 0}`);
+    const orderedRemoteUrls: string[] = [];
+    const seenRemoteUrls = new Set<string>();
+    for (const row of rows || []) {
+      if (!row?.url) continue;
+      const normalized = this.normalizeUrl(row.url);
+      if (seenRemoteUrls.has(normalized)) continue;
+      seenRemoteUrls.add(normalized);
+      orderedRemoteUrls.push(row.url);
+    }
 
     const installed = await stremioService.getInstalledAddonsAsync();
     logger.log(`[SupabaseSyncService] pullAddonsToLocal: localInstalledBefore=${installed.length}`);
@@ -999,6 +1071,15 @@ class SupabaseSyncService {
     } else {
       logger.log('[SupabaseSyncService] pullAddonsToLocal: remote set empty, skipped local prune');
     }
+
+    if (orderedRemoteUrls.length > 0) {
+      try {
+        const changed = await stremioService.applyAddonOrderFromManifestUrls(orderedRemoteUrls);
+        logger.log(`[SupabaseSyncService] pullAddonsToLocal: orderReconciled changed=${changed}`);
+      } catch (error) {
+        logger.warn('[SupabaseSyncService] pullAddonsToLocal: failed to reconcile addon order:', error);
+      }
+    }
   }
 
   private async pushAddonsFromLocal(): Promise<void> {
@@ -1024,12 +1105,14 @@ class SupabaseSyncService {
 
   private async pullWatchProgressToLocal(): Promise<void> {
     const rows = await this.callRpc<WatchProgressRow[]>('sync_pull_watch_progress', {});
+    const remoteSet = new Set<string>();
 
     for (const row of rows || []) {
       if (!row.content_id) continue;
       const type = row.content_type === 'movie' ? 'movie' : 'series';
       const season = row.season == null ? null : Number(row.season);
       const episode = row.episode == null ? null : Number(row.episode);
+      remoteSet.add(`${type}:${row.content_id}:${season ?? ''}:${episode ?? ''}`);
 
       const episodeId = type === 'series' && season != null && episode != null
         ? `${row.content_id}:${season}:${episode}`
@@ -1054,8 +1137,33 @@ class SupabaseSyncService {
         {
           preserveTimestamp: true,
           forceWrite: true,
+          forceNotify: true,
         }
       );
+    }
+
+    // Reconcile removals only when remote has at least one entry to avoid wiping local
+    // data if backend temporarily returns an empty set.
+    if (remoteSet.size > 0) {
+      const allLocal = await storageService.getAllWatchProgress();
+      let removedCount = 0;
+
+      for (const [key] of Object.entries(allLocal)) {
+        const parsed = this.parseWatchProgressKey(key);
+        if (!parsed) continue;
+        const localSig = `${parsed.contentType}:${parsed.contentId}:${parsed.season ?? ''}:${parsed.episode ?? ''}`;
+        if (remoteSet.has(localSig)) continue;
+
+        const episodeId = parsed.contentType === 'series' && parsed.season != null && parsed.episode != null
+          ? `${parsed.contentId}:${parsed.season}:${parsed.episode}`
+          : undefined;
+
+        await storageService.removeWatchProgress(parsed.contentId, parsed.contentType, episodeId);
+        removedCount += 1;
+      }
+      logger.log(`[SupabaseSyncService] pullWatchProgressToLocal: removedLocalExtras=${removedCount}`);
+    } else {
+      logger.log('[SupabaseSyncService] pullWatchProgressToLocal: remote set empty, skipped local prune');
     }
   }
 
@@ -1085,11 +1193,13 @@ class SupabaseSyncService {
     const rows = await this.callRpc<LibraryRow[]>('sync_pull_library', {});
     const localItems = await catalogService.getLibraryItems();
     const existing = new Set(localItems.map((item) => `${item.type}:${item.id}`));
+    const remoteSet = new Set<string>();
 
     for (const row of rows || []) {
       if (!row.content_id || !row.content_type) continue;
       const type = row.content_type === 'movie' ? 'movie' : 'series';
       const key = `${type}:${row.content_id}`;
+      remoteSet.add(key);
       if (existing.has(key)) continue;
 
       try {
@@ -1098,6 +1208,25 @@ class SupabaseSyncService {
       } catch (error) {
         logger.warn('[SupabaseSyncService] Failed to merge library item from sync:', key, error);
       }
+    }
+
+    // Reconcile removals only when remote has at least one entry to avoid wiping local
+    // data if backend temporarily returns an empty set.
+    if (remoteSet.size > 0) {
+      let removedCount = 0;
+      for (const item of localItems) {
+        const key = `${item.type}:${item.id}`;
+        if (remoteSet.has(key)) continue;
+        try {
+          await catalogService.removeFromLibrary(item.type, item.id);
+          removedCount += 1;
+        } catch (error) {
+          logger.warn('[SupabaseSyncService] Failed to remove local library item missing in remote set:', key, error);
+        }
+      }
+      logger.log(`[SupabaseSyncService] pullLibraryToLocal: removedLocalExtras=${removedCount}`);
+    } else {
+      logger.log('[SupabaseSyncService] pullLibraryToLocal: remote set empty, skipped local prune');
     }
   }
 
@@ -1124,7 +1253,7 @@ class SupabaseSyncService {
   private async pullWatchedItemsToLocal(): Promise<void> {
     const rows = await this.callRpc<WatchedRow[]>('sync_pull_watched_items', {});
     const mapped = (rows || []).map((row) => this.toWatchedItem(row));
-    await watchedService.mergeRemoteWatchedItems(mapped);
+    await watchedService.reconcileRemoteWatchedItems(mapped);
   }
 
   private async pushWatchedItemsFromLocal(): Promise<void> {

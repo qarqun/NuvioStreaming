@@ -29,8 +29,6 @@ const AuthScreen: React.FC = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showWarningDetails, setShowWarningDetails] = useState(false);
-  const authCardOpacity = useRef(new Animated.Value(1)).current;
 
   // Subtle, performant animations
   const introOpacity = useRef(new Animated.Value(0)).current;
@@ -191,27 +189,6 @@ const AuthScreen: React.FC = () => {
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' as never }] } as any);
   };
 
-  const toggleWarningDetails = () => {
-    if (showWarningDetails) {
-      // Fade in auth card
-      Animated.timing(authCardOpacity, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      // Fade out auth card
-      Animated.timing(authCardOpacity, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-    setShowWarningDetails(!showWarningDetails);
-  };
-
   // showToast helper replaced with direct calls to toast.* API
 
   return (
@@ -279,72 +256,12 @@ const AuthScreen: React.FC = () => {
           </Text>
         </Animated.View>
 
-        {/* Important Warning Message */}
-        <Animated.View
-          style={[
-            styles.warningContainer,
-            {
-              opacity: introOpacity,
-              transform: [{ translateY: introTranslateY }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.warningCard, { backgroundColor: 'rgba(255, 193, 7, 0.1)', borderColor: 'rgba(255, 193, 7, 0.3)' }]}
-            onPress={toggleWarningDetails}
-            activeOpacity={0.8}
-          >
-            <MaterialIcons name="warning" size={20} color="#FFC107" style={styles.warningIcon} />
-            <View style={styles.warningContent}>
-              <Text style={[styles.warningTitle, { color: '#FFC107' }]}>
-                Important Notice
-              </Text>
-              <Text style={[styles.warningText, { color: currentTheme.colors.white }]}>
-                This authentication system will be completely replaced by local backup/restore functionality by October 8th. Please create backup files as your cloud data will be permanently destroyed.
-              </Text>
-              <Text style={[styles.readMoreText, { color: '#FFC107' }]}>
-                Read more {showWarningDetails ? '▼' : '▶'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          
-          {/* Expanded Details */}
-          {showWarningDetails && (
-            <Animated.View style={[styles.warningDetails, { backgroundColor: 'rgba(255, 193, 7, 0.05)', borderColor: 'rgba(255, 193, 7, 0.2)' }]}>
-              <View style={styles.detailsContent}>
-                <Text style={[styles.detailsTitle, { color: '#FFC107' }]}>
-                  Why is this system being discontinued?
-                </Text>
-                <Text style={[styles.detailsText, { color: currentTheme.colors.white }]}>
-                  • Lack of real-time support for addon synchronization{'\n'}
-                  • Database synchronization issues with addons and settings{'\n'}
-                  • Unreliable cloud data management{'\n'}
-                  • Performance problems with remote data access
-                </Text>
-                
-                <Text style={[styles.detailsTitle, { color: '#FFC107', marginTop: 16 }]}>
-                  Benefits of Local Backup System:
-                </Text>
-                <Text style={[styles.detailsText, { color: currentTheme.colors.white }]}>
-                  • Instant addon synchronization across devices{'\n'}
-                  • Reliable offline access to all your data{'\n'}
-                  • Complete control over your backup files{'\n'}
-                  • Faster performance with local data storage{'\n'}
-                  • No dependency on external servers{'\n'}
-                  • Easy migration between devices
-                </Text>
-              </View>
-            </Animated.View>
-          )}
-        </Animated.View>
-
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         >
-          {/* Main Card - Hide when warning details are expanded */}
-          <Animated.View style={[styles.centerContainer, { opacity: authCardOpacity }]}>
+          <Animated.View style={styles.centerContainer}>
             <Animated.View style={[styles.card, { 
               backgroundColor: Platform.OS === 'android' ? '#121212' : 'rgba(255,255,255,0.02)',
               borderColor: Platform.OS === 'android' ? '#1f1f1f' : 'rgba(255,255,255,0.06)',
@@ -772,63 +689,6 @@ const styles = StyleSheet.create({
   switchModeText: {
     textAlign: 'center',
     fontSize: 14,
-    fontWeight: '500',
-  },
-  warningContainer: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  warningCard: {
-    flexDirection: 'row',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'flex-start',
-  },
-  warningIcon: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  warningContent: {
-    flex: 1,
-  },
-  warningTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  warningText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  readMoreText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 8,
-    alignSelf: 'flex-start',
-  },
-  warningDetails: {
-    marginTop: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  detailsContent: {
-    padding: 16,
-  },
-  detailsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  detailsText: {
-    fontSize: 13,
-    lineHeight: 18,
     fontWeight: '500',
   },
 });

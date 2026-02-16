@@ -1,7 +1,7 @@
 {
     "common": {
         "loading": "Ładowanie...",
-        "cancel": "Annuluj",
+        "cancel": "Anuluj",
         "save": "Zapisz",
         "delete": "Usuń",
         "edit": "Edytuj",
@@ -242,9 +242,9 @@
         "mark_season": "Oznacz sezon {{season}}",
         "resume": "Wznów",
         "spoiler_warning": "Ostrzeżenie o spojlerach",
-        "spoiler_warning_desc": "Ten komentarz zawiera spojlery. Czy na pewno chcesz go wyświetlić?",
+        "spoiler_warning_desc": "Ten komentarz zawiera spoilery. Czy na pewno chcesz go wyświetlić?",
         "cancel": "Anuluj",
-        "reveal_spoilers": "Pokaż spojlery",
+        "reveal_spoilers": "Pokaż spoilery",
         "movie_details": "Szczegóły filmu",
         "show_details": "Pokaż szczegóły",
         "tagline": "Hasło",
@@ -309,7 +309,7 @@
     },
     "comments": {
         "title": "Komentarze Trakt",
-        "spoiler_warning": "⚠️ Ten komentarz zawiera spojlery. Stuknij, aby odkryć.",
+        "spoiler_warning": "⚠️ Ten komentarz zawiera spoilery. Stuknij, aby odkryć.",
         "spoiler": "Spojler",
         "contains_spoilers": "Zawiera spojlery",
         "reveal": "Odkryj",
@@ -328,7 +328,7 @@
         "clips_scenes": "Klipy i sceny",
         "clip": "Klip",
         "featurettes": "Materiały dodatkowe",
-        "featurette": "Featurette",
+        "featurette": "Materiał dodatkowy",
         "behind_the_scenes": "Za kulisami",
         "no_trailers": "Brak dostępnych zwiastunów",
         "unavailable": "Zwiastun niedostępny",
@@ -384,7 +384,7 @@
         "unknown_source": "Nieznane źródło",
         "sources_limited": "Liczba źródeł może być ograniczona z powodu błędów dostawcy.",
         "episodes": "Odcinki",
-        "specials": "Specials",
+        "specials": "Odcinki specjalne",
         "season": "Sezon {{season}}",
         "stream": "Strumień {{number}}",
         "subtitles": "Napisy",
@@ -446,8 +446,8 @@
         "status_unknown": "Nieznany",
         "provider": "Dostawca",
         "streaming_playlist_warning": "Może nie działać – lista odtwarzania strumieniowego",
-        "remaining": "pozostało",
-        "not_ready": "Pobieranie niegotowe",
+        "remaining": "Pozostało",
+        "not_ready": "Pobieranie nie jest jeszcze gotowe",
         "not_ready_desc": "Proszę czekać na zakończenie pobierania.",
         "filter_all": "Wszystkie",
         "filter_active": "Aktywne",
@@ -601,7 +601,7 @@
         "built_in_key_msg": "Obecnie używasz wbudowanego klucza API. Rozważ użycie własnego klucza dla lepszej wydajności.",
         "cache_size": "Rozmiar pamięci podręcznej",
         "clear_cache": "Wyczyść pamięć podręczną",
-        "cache_days": "Odpowiedzi TMDB są przechowywane przez 7 dni w celu poprawy wydajności",
+        "cache_days": "Dane z TMDb są przechowywane przez 7 dni w celu poprawy wydajności",
         "choose_language": "Wybierz język",
         "choose_language_desc": "Wybierz preferowany język dla treści z TMDb",
         "popular": "Popularne",
@@ -1427,4 +1427,4 @@
             "no_logs_captured": "No logs captured."
         }
     }
-}
+} 

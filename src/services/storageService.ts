@@ -80,6 +80,29 @@ class StorageService {
     return `${type}:${id}${episodeId ? `:${episodeId}` : ''}`;
   }
 
+  private normalizeContinueWatchingEpisodeRemoveId(id: string, episodeId?: string): string | undefined {
+    if (!episodeId) return undefined;
+    const normalizedId = id?.trim();
+    const normalizedEpisodeId = episodeId.trim();
+    if (!normalizedId || !normalizedEpisodeId) return undefined;
+
+    const colonMatch = normalizedEpisodeId.match(/(?:^|:)(\d+):(\d+)$/);
+    if (colonMatch) {
+      return `${normalizedId}:${colonMatch[1]}:${colonMatch[2]}`;
+    }
+
+    const sxeMatch = normalizedEpisodeId.match(/s(\d+)e(\d+)/i);
+    if (sxeMatch) {
+      return `${normalizedId}:${sxeMatch[1]}:${sxeMatch[2]}`;
+    }
+
+    if (normalizedEpisodeId.startsWith(`${normalizedId}:`)) {
+      return normalizedEpisodeId;
+    }
+
+    return `${normalizedId}:${normalizedEpisodeId}`;
+  }
+
   public async addWatchProgressTombstone(
     id: string,
     type: string,
@@ -274,12 +297,30 @@ class StorageService {
 
       try {
         const removedMap = await this.getContinueWatchingRemoved();
-        const removedKey = this.buildWpKeyString(id, type);
-        const removedAt = removedMap[removedKey];
+        const removeCandidates: Array<{ removeId: string; key: string }> = [];
 
-        if (removedAt != null && timestamp > removedAt) {
-          logger.log(`♻️ [StorageService] restoring content to continue watching due to new progress: ${type}:${id}`);
-          await this.removeContinueWatchingRemoved(id, type);
+        const baseRemoveId = (id || '').trim();
+        if (baseRemoveId) {
+          removeCandidates.push({
+            removeId: baseRemoveId,
+            key: this.buildWpKeyString(baseRemoveId, type),
+          });
+        }
+
+        const episodeRemoveId = this.normalizeContinueWatchingEpisodeRemoveId(id, episodeId);
+        if (episodeRemoveId && episodeRemoveId !== baseRemoveId) {
+          removeCandidates.push({
+            removeId: episodeRemoveId,
+            key: this.buildWpKeyString(episodeRemoveId, type),
+          });
+        }
+
+        for (const candidate of removeCandidates) {
+          const removedAt = removedMap[candidate.key];
+          if (removedAt != null && timestamp > removedAt) {
+            logger.log(`♻️ [StorageService] restoring content to continue watching due to new progress: ${candidate.key}`);
+            await this.removeContinueWatchingRemoved(candidate.removeId, type);
+          }
         }
       } catch (e) {
         // Ignore error checks for restoration to prevent blocking save

@@ -1817,15 +1817,15 @@ const ContinueWatchingSection = React.forwardRef<ContinueWatchingRef>((props, re
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // For series episodes, only remove the specific episode's local progress
-      // Don't add a base tombstone which would block all episodes of the series
+      // For series episodes, remove only that episode's progress.
+      // Do not wipe all series entries.
       const isEpisode = selectedItem.type === 'series' && selectedItem.season && selectedItem.episode;
       if (isEpisode) {
-        // Only remove local progress for this specific episode (no base tombstone)
-        await storageService.removeAllWatchProgressForContent(
+        const episodeId = `${selectedItem.id}:${selectedItem.season}:${selectedItem.episode}`;
+        await storageService.removeWatchProgress(
           selectedItem.id,
           selectedItem.type,
-          { addBaseTombstone: false }
+          episodeId
         );
       } else {
         // For movies or whole series, add the base tombstone

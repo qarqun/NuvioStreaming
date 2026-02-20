@@ -121,6 +121,8 @@ class SupabaseSyncService {
   private appStateSub: { remove: () => void } | null = null;
   private lastForegroundPullAt = 0;
   private readonly foregroundPullCooldownMs = 30000;
+  private pendingWatchProgressDeleteKeys = new Set<string>();
+  private watchProgressDeleteTimer: ReturnType<typeof setTimeout> | null = null;
 
   private pendingPushTimers: Record<PushTarget, ReturnType<typeof setTimeout> | null> = {
     plugins: null,
@@ -544,7 +546,10 @@ class SupabaseSyncService {
     catalogService.onLibraryRemove(() => this.schedulePush('library'));
 
     storageService.subscribeToWatchProgressUpdates(() => this.schedulePush('watch_progress'));
-    storageService.onWatchProgressRemoved(() => this.schedulePush('watch_progress'));
+    storageService.onWatchProgressRemoved((id, type, episodeId) => {
+      this.schedulePush('watch_progress');
+      this.scheduleWatchProgressDelete(id, type, episodeId);
+    });
 
     watchedService.subscribeToWatchedUpdates(() => this.schedulePush('watched_items'));
 
@@ -591,6 +596,91 @@ class SupabaseSyncService {
         logger.error(`[SupabaseSyncService] Scheduled push failed (${target}):`, error);
       });
     }, DEFAULT_SYNC_DEBOUNCE_MS);
+  }
+
+  private scheduleWatchProgressDelete(id: string, type: string, episodeId?: string): void {
+    if (!this.isConfigured() || this.suppressPushes) return;
+
+    const keys = this.resolveWatchProgressDeleteKeys(id, type, episodeId);
+    if (keys.length === 0) return;
+    keys.forEach((key) => this.pendingWatchProgressDeleteKeys.add(key));
+
+    if (this.watchProgressDeleteTimer) {
+      clearTimeout(this.watchProgressDeleteTimer);
+    }
+    this.watchProgressDeleteTimer = setTimeout(() => {
+      this.watchProgressDeleteTimer = null;
+      this.flushWatchProgressDeletes().catch((error) => {
+        logger.error('[SupabaseSyncService] watch progress delete flush failed:', error);
+      });
+    }, DEFAULT_SYNC_DEBOUNCE_MS);
+  }
+
+  private async flushWatchProgressDeletes(): Promise<void> {
+    if (!this.isConfigured() || this.suppressPushes) return;
+
+    const keys = Array.from(this.pendingWatchProgressDeleteKeys);
+    if (keys.length === 0) return;
+    this.pendingWatchProgressDeleteKeys.clear();
+
+    await this.initialize();
+    if (!this.session) {
+      keys.forEach((key) => this.pendingWatchProgressDeleteKeys.add(key));
+      return;
+    }
+
+    const traktConnected = await this.isTraktConnected();
+    if (traktConnected) return;
+
+    try {
+      logger.log(`[SupabaseSyncService] flushWatchProgressDeletes: deleting ${keys.length} keys`);
+      await this.callRpc<void>('sync_delete_watch_progress', { p_keys: keys });
+    } catch (error) {
+      keys.forEach((key) => this.pendingWatchProgressDeleteKeys.add(key));
+      throw error;
+    }
+  }
+
+  private resolveWatchProgressDeleteKeys(id: string, type: string, episodeId?: string): string[] {
+    const contentId = (id || '').trim();
+    const contentType = (type || '').trim().toLowerCase();
+    if (!contentId || !contentType) return [];
+
+    const keys = new Set<string>();
+
+    if (contentType === 'movie') {
+      keys.add(contentId);
+      return Array.from(keys);
+    }
+
+    // Always delete the series mirror key when removing series progress.
+    keys.add(contentId);
+
+    const normalizedEpisodeId = (episodeId || '').trim();
+    if (normalizedEpisodeId) {
+      const parsed = this.parseSeasonEpisodeFromEpisodeId(normalizedEpisodeId);
+      if (parsed) {
+        keys.add(`${contentId}_s${parsed.season}e${parsed.episode}`);
+      } else {
+        // Fallback for any non-standard legacy progress_key format.
+        keys.add(`${contentId}_${normalizedEpisodeId}`);
+      }
+    }
+
+    return Array.from(keys);
+  }
+
+  private parseSeasonEpisodeFromEpisodeId(
+    episodeId: string
+  ): { season: number; episode: number } | null {
+    const match = episodeId.match(/(?:^|:)(\d+):(\d+)$/);
+    if (!match) return null;
+
+    const season = Number(match[1]);
+    const episode = Number(match[2]);
+    if (!Number.isFinite(season) || !Number.isFinite(episode)) return null;
+
+    return { season, episode };
   }
 
   private async executeScheduledPush(target: PushTarget): Promise<void> {
@@ -1194,29 +1284,7 @@ class SupabaseSyncService {
       );
     }
 
-    // Reconcile removals only when remote has at least one entry to avoid wiping local
-    // data if backend temporarily returns an empty set.
-    if (remoteSet.size > 0) {
-      const allLocal = await storageService.getAllWatchProgress();
-      let removedCount = 0;
-
-      for (const [key] of Object.entries(allLocal)) {
-        const parsed = this.parseWatchProgressKey(key);
-        if (!parsed) continue;
-        const localSig = `${parsed.contentType}:${parsed.contentId}:${parsed.season ?? ''}:${parsed.episode ?? ''}`;
-        if (remoteSet.has(localSig)) continue;
-
-        const episodeId = parsed.contentType === 'series' && parsed.season != null && parsed.episode != null
-          ? `${parsed.contentId}:${parsed.season}:${parsed.episode}`
-          : undefined;
-
-        await storageService.removeWatchProgress(parsed.contentId, parsed.contentType, episodeId);
-        removedCount += 1;
-      }
-      logger.log(`[SupabaseSyncService] pullWatchProgressToLocal: removedLocalExtras=${removedCount}`);
-    } else {
-      logger.log('[SupabaseSyncService] pullWatchProgressToLocal: remote set empty, skipped local prune');
-    }
+    logger.log(`[SupabaseSyncService] pullWatchProgressToLocal: merged ${(rows || []).length} remote entries (no local prune)`);
   }
 
   private async pushWatchProgressFromLocal(): Promise<void> {

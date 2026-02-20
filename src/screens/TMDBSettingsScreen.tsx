@@ -1181,7 +1181,8 @@ const TMDBSettingsScreen = () => {
                           { code: 'sl', label: 'Slovenščina', native: 'Slovenian' },
                           { code: 'mk', label: 'Македонски', native: 'Macedonian' },
                           { code: 'fil', label: 'Filipino', native: 'Filipino' },
-                          { code: 'sq', label: 'Shqipe', native: 'Albanian' }, 
+                          { code: 'sq', label: 'Shqipe', native: 'Albanian' },
+                          { code: 'ca', label: 'Català', native: 'Catalan' },
                         ];
 
                         const filteredLanguages = languages.filter(({ label, code, native }) =>

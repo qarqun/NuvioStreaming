@@ -23,6 +23,7 @@ import fil from './locales/fil.json';
 import nlNL from './locales/nl-NL.json';
 import ro from './locales/ro.json';
 import sq from './locales/sq.json';
+import ca from './locales/ca.json';
 
 export const resources = {
     en: { translation: en },
@@ -49,4 +50,5 @@ export const resources = {
     'nl-NL': { translation: nlNL },
     ro: { translation: ro },
     sq: { translation: sq },
+    ca: { translation: ca },
 };

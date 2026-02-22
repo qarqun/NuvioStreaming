@@ -178,8 +178,8 @@ const SyncSettingsScreen: React.FC = () => {
           </View>
           <Text style={[styles.cardText, { color: currentTheme.colors.mediumEmphasis }]}>
             {externalSyncActive
-              ? `${externalSyncServices.join(' + ')} is active. Watch progress and library updates are managed by these services instead of Nuvio cloud database.`
-              : 'If Trakt or Simkl sync is enabled, watch progress and library updates will use those services instead of Nuvio cloud database.'}
+              ? `${externalSyncServices.join(' + ')} is active. Watch progress and watched status are managed by these services instead of Nuvio cloud database. Library sync still uses Nuvio cloud.`
+              : 'If Trakt or Simkl sync is enabled, watch progress and watched status will use those services instead of Nuvio cloud database. Library sync still uses Nuvio cloud.'}
           </Text>
         </View>
 
